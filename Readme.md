@@ -185,7 +185,250 @@ print a  # [1]
 
 ## 2 Python中的元类(metaclass)
 
-这个非常的不常用,但是像ORM这种复杂的结构还是会需要的,详情请看:http://stackoverflow.com/questions/100003/what-is-a-metaclass-in-python
+不常用,但是像ORM这种复杂的结构还是会需要的,[详情请看这](http://stackoverflow.com/questions/100003/what-is-a-metaclass-in-python)
+
+### 什么是元类
+
+**元类就是创建类的东西**.
+你是为了创建对象才定义类的,对吧?
+但是我们已经知道了Python的类是对象.
+这里, **元类创建类.它们是类的类**,你可以把它们想象成这样:  
+```python
+MyClass = MetaClass()    
+MyObject = MyClass()  
+```
+你已经看到了type可以让你像这样做：  
+MyClass = type('MyClass', (), {})  
+这是因为 **type就是一个元类.type是Python中创建所有类的元类**.
+
+现在你可能纳闷为啥子type用小写而不写成Type?  
+我想是因为要跟str保持一致,str创建字符串对象,int创建整数对象.type正好创建类对象.  
+你可以通过检查`__class__`属性来看到这一点.
+
+Python中所有的东西都是对象.包括整数,字符串,函数还有类.所有这些都是对象.所有这些也都是从类中创建的:  
+```python
+>>> age = 35
+>>> age.__class__
+<type 'int'>
+>>> name = 'bob'
+>>> name.__class__
+<type 'str'>
+>>> def foo(): pass
+>>> foo.__class__
+<type 'function'>
+>>> class Bar(object): pass
+>>> b = Bar()
+>>> b.__class__
+<class '__main__.Bar'>
+```  
+那么,`__class__`的`__class__`属性是什么?  
+```python
+>>> age.__class__.__class__
+<type 'type'>
+>>> name.__class__.__class__
+<type 'type'>
+>>> foo.__class__.__class__
+<type 'type'>
+>>> b.__class__.__class__
+<type 'type'>
+```  
+所以,元类就是创建类对象的东西.  
+如果你愿意你也可以把它叫做'类工厂'.type是Python的内建元类,当然,你也可以创建你自己的元类.
+### `__metaclass__`属性
+当你创建一个函数的时候,你可以添加`__metaclass__`属性:  
+```python
+class Foo(object):
+  __metaclass__ = something...
+  [...]
+```  
+如果你这么做了，Python就会用元类来创建类Foo.  
+小心点，这里面有些技巧.  
+你首先写下`class Foo(object)`，但是类对象Foo还没有在内存中创建.  
+**Python将会在类定义中寻找`__metaclass__`，如果找到了就用它来创建类对象Foo，如果没找到，就会默认用type创建类。**  
+
+把下面这段话反复读几次。  
+当你写如下代码时 :  
+```python
+class Foo(Bar):
+  pass
+```  
+Python将会这样运行:  
+1. 在`Foo`中有没有`___metaclass__`属性?  
+2. 如果有,`Python`会在内存中通过`__metaclass__`创建一个名字为`Foo`的类对象(我说的是类对象,跟紧我的思路).  
+3. 如果`Python`没有找到`__metaclass__`，它会继续在`Bar`（父类）中寻找`__metaclass__`属性，并尝试做和前面同样的操作.  
+4. 如果`Python`在任何父类中都找不到`__metaclass__`，它就会在模块层次中去寻找`__metaclass__`，并尝试做同样的操作。  
+5. 如果还是找不到`__metaclass__`,`Python`就会用内置的`type`来创建这个类对象。
+
+现在的问题就是，你可以在`__metaclass__`中放置些什么代码呢？  
+答案就是：可以创建一个类的东西。
+
+那么什么可以用来创建一个类呢？type，或者任何使用到type或者子类化type的东东都可以。 
+###自定义元类
+**元类的主要目的就是为了当创建类时能够自动地改变类.**  
+通常，你会为API做这样的事情，你希望可以创建符合当前上下文的类.  
+假想一个很傻的例子，你决定在你的模块里所有的类的属性都应该是大写形式。有好几种方法可以办到，
+但其中一种就是通过在模块级别设定`__metaclass__`.  
+采用这种方法，这个模块中的所有类都会通过这个元类来创建，我们只需要告诉元类把所有的属性都改成大写形式就万事大吉了。  
+幸运的是，`__metaclass__`实际上可以被任意调用，它并不需要是一个正式的类（我知道，某些名字里带有`class`的东西并不需要是一个class，
+画画图理解下，这很有帮助）。  
+所以，我们这里就先以一个简单的函数作为例子开始。  
+```python
+# 元类会自动将你通常传给'type'的参数作为自己的参数传入
+def upper_attr(future_class_name, future_class_parents, future_class_attr):
+  """
+    返回一个将属性列表变为大写字母的类对象
+  """
+  # 选取所有不以'__'开头的属性,并把它们编程大写
+  uppercase_attr = {}
+  for name, val in future_class_attr.items():
+      if not name.startswith('__'):
+          uppercase_attr[name.upper()] = val
+      else:
+          uppercase_attr[name] = val
+  # 用'type'创建类
+  return type(future_class_name, future_class_parents, uppercase_attr)
+__metaclass__ = upper_attr # 将会影响整个模块
+class Foo(): # global __metaclass__ won't work with "object" though
+  # 我们也可以只在这里定义__metaclass__，这样就只会作用于这个类中
+  bar = 'bip'
+print(hasattr(Foo, 'bar'))
+# 输出: False
+print(hasattr(Foo, 'BAR'))
+# 输出: True
+f = Foo()
+print(f.BAR)
+# 输出: 'bip'
+```
+
+现在让我们再做一次，这一次用一个真正的`class`来当做元类。  
+```python
+# 请记住，'type'实际上是一个类，就像'str'和'int'一样
+# 所以，你可以从type继承
+class UpperAttrMetaclass(type):
+    # __new__ 是在__init__之前被调用的特殊方法
+    # __new__是用来创建对象并返回它的方法
+    # 而__init__只是用来将传入的参数初始化给对象
+    # 你很少用到__new__，除非你希望能够控制对象的创建
+    # 这里，创建的对象是类，我们希望能够自定义它，所以我们这里改写__new__
+    # 如果你希望的话，你也可以在__init__中做些事情
+    # 还有一些高级的用法会涉及到改写__call__特殊方法，但是我们这里不用
+    def __new__(upperattr_metaclass, future_class_name,
+                future_class_parents, future_class_attr):
+        uppercase_attr = {}
+        for name, val in future_class_attr.items():
+            if not name.startswith('__'):
+                uppercase_attr[name.upper()] = val
+            else:
+                uppercase_attr[name] = val
+        return type(future_class_name, future_class_parents, uppercase_attr)
+```  
+
+但是这不是真正的面向对象(OOP).我们直接调用了`type`，而且我们没有改写父类的`new`方法。现在让我们这样去处理:  
+```python
+class UpperAttrMetaclass(type):
+    def __new__(upperattr_metaclass, future_class_name,
+                future_class_parents, future_class_attr):
+        uppercase_attr = {}
+        for name, val in future_class_attr.items():
+            if not name.startswith('__'):
+                uppercase_attr[name.upper()] = val
+            else:
+                uppercase_attr[name] = val
+        # 重用 type.__new__ 方法
+        # 这就是基本的OOP编程，没什么魔法
+        return type.__new__(upperattr_metaclass, future_class_name,
+                            future_class_parents, uppercase_attr)
+```                          
+你可能已经注意到了有个额外的参数`upperattr_metaclass`，这并没有什么特别的。类方法的第一个参数总是表示当前的实例，
+就像在普通的类方法中的self参数一样。
+
+当然了，为了清晰起见，这里的名字我起的比较长。但是就像self一样，所有的参数都有它们的传统名称。
+因此，在真实的产品代码中一个元类应该是像这样的：  
+```python
+class UpperAttrMetaclass(type):
+    def __new__(cls, clsname, bases, dct):
+        uppercase_attr = {}
+        for name, val in dct.items():
+            if not name.startswith('__'):
+                uppercase_attr[name.upper()] = val
+            else:
+                uppercase_attr[name] = val
+        return type.__new__(cls, clsname, bases, uppercase_attr)
+```      
+
+如果使用`super`方法的话，我们还可以使它变得更清晰一些，这会缓解继承（是的，你可以拥有元类，从元类继承，从`type`继承）
+```python
+class UpperAttrMetaclass(type):
+    def __new__(cls, clsname, bases, dct):
+        uppercase_attr = {}
+        for name, val in dct.items():
+            if not name.startswith('__'):
+                uppercase_attr[name.upper()] = val
+            else:
+                uppercase_attr[name] = val
+        return super(UpperAttrMetaclass, cls).__new__(cls, clsname, bases, uppercase_attr)
+```  
+就是这样，除此之外，关于元类真的没有别的可说的了。
+
+使用到元类的代码比较复杂，这背后的原因倒并不是因为元类本身，而是因为你通常会使用元类去做一些晦涩的事情，依赖于自省，控制继承等等。
+
+确实，用元类来搞些“黑暗魔法”是特别有用的，因而会搞出些复杂的东西来。但就元类本身而言，它们其实是很简单的：  
+**拦截类的创建  
+修改一个类  
+返回修改之后的类**
+
+###为什么要用metaclass类而不是函数?
+
+由于`__metaclass__`可以接受任何可调用的对象，那为何还要使用类呢，因为很显然使用类会更加复杂啊？  
+这里有好几个原因：  
+意图会更加清晰。当你读到UpperAttrMetaclass(type)时，你知道接下来要发生什么。  
+你可以使用OOP编程。元类可以从元类中继承而来，改写父类的方法。元类甚至还可以使用元类。  
+你可以把代码组织的更好。当你使用元类的时候肯定不会是像我上面举的这种简单场景，通常都是针对比较复杂的问题。
+将多个方法归总到一个类中会很有帮助，也会使得代码更容易阅读。  
+你可以使用`__new__`,`__init__`以及`__call__`这样的特殊方法。它们能帮你处理不同的任务。就算通常你可以把所有的东西都
+在`__new__`里处理掉，有些人还是觉得用`__init__`更舒服些。  
+哇哦，这东西的名字是`metaclass`，肯定非善类，我要小心！
+说了这么多TMD究竟为什么要使用元类？
+
+现在回到我们的大主题上来，究竟是为什么你会去使用这样一种容易出错且晦涩的特性？  
+好吧，一般来说，你根本就用不上它：  
+**“元类就是深度的魔法，99%的用户应该根本不必为此操心。如果你想搞清楚究竟是否需要用到元类，那么你就不需要它。
+那些实际用到元类的人都非常清楚地知道他们需要做什么，而且根本不需要解释为什么要用元类。” —— Python界的领袖 Tim Peters**
+
+元类的主要用途是创建API。一个典型的例子是Django ORM。
+它允许你像这样定义：  
+```python
+class Person(models.Model):
+  name = models.CharField(max_length=30)
+  age = models.IntegerField()
+```  
+但是如果你像这样做的话：  
+```python
+guy = Person(name='bob', age='35')
+print(guy.age)
+```  
+这并不会返回一个`IntegerField`对象，而是会返回一个`int`，甚至可以直接从数据库中取出数据。  
+这是有可能的，因为`models.Model`定义了`__metaclass__`， 并且使用了一些魔法能够将你刚刚定义的简单的Person类转变成
+对数据库的一个复杂`hook`。  
+`Django`框架将这些看起来很复杂的东西通过暴露出一个简单的使用元类的API将其化简，通过这个API重新创建代码，在背后完成真正的工作。
+
+结语  
+首先，你知道了类其实是能够创建出类实例的对象。
+好吧，事实上，类本身也是实例，当然，它们是元类的实例。  
+```python
+>>> class Foo(object): pass
+>>> id(Foo)
+142630324
+```  
+
+**Python中的一切都是对象，它们要么是类的实例，要么是元类的实例.**  
+除了`type.type`实际上是它自己的元类，在纯`Python`环境中这可不是你能够做到的，这是通过在实现层面耍一些小手段做到的。  
+其次，元类是很复杂的。对于非常简单的类，你可能不希望通过使用元类来对类做修改。你可以通过其他两种技术来修改类： 
+
+* [monkey patching](https://en.wikipedia.org/wiki/Monkey_patch)
+* 装饰器  
+
+当你需要动态修改类时，99%的时间里你最好使用上面这两种技术。当然了，其实在99%的时间里你根本就不需要动态修改类 :D
 
 ## 3 @staticmethod和@classmethod
 
@@ -630,7 +873,7 @@ d =  [1, 2, 3, 4, ['a', 'b']]
 
 ## 24 Python垃圾回收机制
 
-[详细资料] (http://www.jianshu.com/p/1e375fb40506)
+[详细资料](http://www.jianshu.com/p/1e375fb40506)
 
 Python GC主要使用引用计数（reference counting）来跟踪和回收垃圾。在引用计数的基础上，通过“标记-清除”（mark and sweep）解决容器对象可能产生的循环引用问题，通过“分代回收”（generation collection）以空间换时间的方法提高垃圾回收效率。
 
@@ -695,30 +938,29 @@ What is the difference between range and xrange functions in Python 2.X?
 
 http://stackoverflow.com/questions/94935/what-is-the-difference-between-range-and-xrange-functions-in-python-2-x
 
-## 31 到底什么是Python？你可以在回答中与其他技术进行对比（也鼓励这样做）。
-
-答案
-
+## 31 到底什么是Python？你可以在回答中与其他技术进行对比（也鼓励这样做）
 下面是一些关键点：
 
-1. Python是一种解释型语言。这就是说，与C语言和C的衍生语言不同，Python代码在运行之前不需要编译。其他解释型语言还包括PHP和Ruby。
-2. Python是动态类型语言，指的是你在声明变量时，不需要说明变量的类型。你可以直接编写类似`x=111`和`x="I'm a string"`这样的代码，程序不会报错。
+1. Python是一种 **解释型语言**。这就是说，与C语言和C的衍生语言不同，Python代码在运行之前不需要编译。其他解释型语言还包括PHP和Ruby。
+2. Python是 **动态类型语言**，指的是你在声明变量时，不需要说明变量的类型。你可以直接编写类似`x=111`和`x="I'm a string"`这样的代码，程序不会报错。
 3. Python非常适合面向对象的编程（OOP），因为它支持通过组合（composition）与继承（inheritance）的方式定义类（class）。Python中没有访问说明符（access specifier，类似C++中的`public`和`private`），这么设计的依据是“大家都是成年人了”。
 4. 在Python语言中，函数是第一类对象（first-class objects）。这指的是它们可以被指定给变量，函数既能返回函数类型，也可以接受函数作为输入。类（class）也是第一类对象。
 5. Python代码编写快，但是运行速度比编译语言通常要慢。好在Python允许加入基于C语言编写的扩展，因此我们能够优化代码，消除瓶颈，这点通常是可以实现的。`numpy`就是一个很好地例子，它的运行速度真的非常快，因为很多算术运算其实并不是通过Python实现的。
 6. Python用途非常广泛——网络应用，自动化，科学建模，大数据应用，等等。它也常被用作“胶水语言”，帮助其他语言和组件改善运行状况。
 7. Python让困难的事情变得容易，因此程序员可以专注于算法和数据结构的设计，而不用处理底层的细节。
 
-## 32 Python和多线程（multi-threading）。这是个好主意码？列举一些让Python代码以并行方式运行的方法。
+## 32 Python和多线程（multi-threading）。这是个好主意码？列举一些让Python代码以并行方式运行的方法
+Python并不支持真正意义上的多线程。Python中提供了多线程包，但是如果你想通过多线程提高代码的速度，使用多线程包并不是个好主意。
+Python中有一个被称为`Global Interpreter Lock`（GIL）的东西，它会确保任何时候你的多个线程中，只有一个被执行。
+线程的执行速度非常之快，会让你误以为线程是并行执行的，但是实际上都是轮流执行。经过GIL这一道关卡处理，会增加执行的开销。
+这意味着，如果你想提高代码的运行速度，使用threading包并不是一个很好的方法。
 
-答案
+不过还是有很多理由促使我们使用threading包的。如果你想同时执行一些任务，而且不考虑效率问题，那么使用这个包是完全没问题的，
+而且也很方便。但是大部分情况下，并不是这么一回事，你会希望把多线程的部分外包给操作系统完成（通过开启多个进程），
+或者是某些调用你的Python代码的外部程序（例如Spark或Hadoop），又或者是你的Python代码调用的其他代码
+（例如，你可以在Python中调用C函数，用于处理开销较大的多线程工作）。
 
-Python并不支持真正意义上的多线程。Python中提供了多线程包，但是如果你想通过多线程提高代码的速度，使用多线程包并不是个好主意。Python中有一个被称为`Global Interpreter Lock`（GIL）的东西，它会确保任何时候你的多个线程中，只有一个被执行。线程的执行速度非常之快，会让你误以为线程是并行执行的，但是实际上都是轮流执行。经过GIL这一道关卡处理，会增加执行的开销。这意味着，如果你想提高代码的运行速度，使用threading包并不是一个很好的方法。
-
-不过还是有很多理由促使我们使用threading包的。如果你想同时执行一些任务，而且不考虑效率问题，那么使用这个包是完全没问题的，而且也很方便。但是大部分情况下，并不是这么一回事，你会希望把多线程的部分外包给操作系统完成（通过开启多个进程），或者是某些调用你的Python代码的外部程序（例如Spark或Hadoop），又或者是你的Python代码调用的其他代码（例如，你可以在Python中调用C函数，用于处理开销较大的多线程工作）。
-
-为什么提这个问题
-
+为什么提这个问题  
 因为GIL就是个混账东西（A-hole）。很多人花费大量的时间，试图寻找自己多线程代码中的瓶颈，直到他们明白GIL的存在。
 
 ## 33 with
@@ -879,7 +1121,8 @@ Bulid过程可以分解为4个步骤:预处理(Prepressing), 编译(Compilation)
 
 **不可重复读**：对于事务T1，T2，T1需要读取一个字段两次，在第一次和第二次读取之间，T2更新了该字段，导致T1第二次读取到的内容值不同。
 
-**幻读**： 事务A读取与搜索条件相匹配的若干行。事务B以插入或删除行等方式来修改事务A的结果集，然后再提交。 幻读与不可重复读之间的区别是幻读强调的是新增或删除,而不可重复读强调的是修改。比如Mary两次查工资，中间有人改过工资，则两次结果不一样，这就是不可重复读。Mary要查工资一千的人数，第一次查到了10个，中间有人增加了一条工资为一千的人，下次查的时候就变成了11个，好像第一次查询的是幻觉一样。
+**幻读**： 事务A读取与搜索条件相匹配的若干行。事务B以插入或删除行等方式来修改事务A的结果集，然后再提交。 **幻读与不可重复读之间的区别是幻读强调的是新增或删除,而不可重复读强调的是修改**。
+比如Mary两次查工资，中间有人改过工资，则两次结果不一样，这就是不可重复读。Mary要查工资一千的人数，第一次查到了10个，中间有人增加了一条工资为一千的人，下次查的时候就变成了11个，好像第一次查询的是幻觉一样。
 
 ### 事务的四个隔离级别 
 实际工作中事务几乎都是并发的，完全做到互相之间不干扰会严重牺牲性能，为了平衡隔离型和性能，SQL92规范定义了四个事务隔离级别：读未提交（Read Uncommitted）、读已提交（Read Committed）、可重复读（Repeatable Read）、串行化（Serializable）。四个级别逐渐增强，每个级别解决上个级别的一个问题。
@@ -894,6 +1137,8 @@ Bulid过程可以分解为4个步骤:预处理(Prepressing), 编译(Compilation)
 可重复读保证了同一个事务里，查询的结果都是事务开始时的状态（一致性）。但是，如果另一个事务同时提交了新数据，本事务再更新时，就会发现了这些新数据，貌似之前读到的数据是幻觉，这就是幻读。
 
 **串行化（Serializable）** 所有事务只能一个接一个串行执行，不能并发。
+
+![事务隔离级别](img/transaction_isolation.png)
 
 ### 隔离级别的选择
 
@@ -989,11 +1234,11 @@ InnoDB 的趋势会是一个非常复杂的存储引擎，对于一些小的应�
 并且，他还支持更多的高级应用，比如：事务。
 
 ## 7 范式
-◆ 第一范式（1NF）：强调的是`列的原子性`，即列不能够再分成其他几列。 考虑这样一个表：【联系人】（姓名，性别，电话） 如果在实际场景中，
+◆ 第一范式（1NF）：强调的是 **列的原子性**，即列不能够再分成其他几列。 考虑这样一个表：【联系人】（姓名，性别，电话） 如果在实际场景中，
 一个联系人有家庭电话和公司电话，那么这种表结构设计就没有达到 1NF。要符合 1NF 我们只需把列（电话）拆分，
 即：【联系人】（姓名，性别，家庭电话，公司电话）。1NF 很好辨别，但是 2NF 和 3NF 就容易搞混淆。
 
-◆ 第二范式（2NF）：首先是 1NF，另外包含两部分内容，一是表必须有一个主键；二是没有包含在主键中的列必须`完全依赖于主键`，
+◆ 第二范式（2NF）：首先是 1NF，另外包含两部分内容，一是表必须有一个主键；二是没有包含在主键中的列必须 **完全依赖于主键**，
 而不能只依赖于主键的一部分。 考虑一个订单明细表：【OrderDetail】（OrderID，ProductID，UnitPrice，Discount，Quantity，ProductName）。 
 因为我们知道在一个订单中可以订购多种产品，所以单单一个 OrderID 是不足以成为主键的，主键应该是（OrderID，ProductID）。
 显而易见 Discount（折扣），Quantity（数量）完全依赖（取决）于主键（OderID，ProductID），而 UnitPrice，ProductName 只依赖于 ProductID。
@@ -1001,12 +1246,14 @@ InnoDB 的趋势会是一个非常复杂的存储引擎，对于一些小的应�
 【OrderDetail】（OrderID，ProductID，Discount，Quantity）和【Product】（ProductID，UnitPrice，ProductName）
 来消除原订单表中UnitPrice，ProductName多次重复的情况。
 
-◆ 第三范式（3NF）：首先是 2NF，另外非主键列必须直接依赖于主键，`不能存在传递依赖`。即不能存在：非主键列 A 依赖于非主键列 B，
+◆ 第三范式（3NF）：首先是 2NF，另外非主键列必须直接依赖于主键， **不能存在传递依赖**。即不能存在：非主键列 A 依赖于非主键列 B，
 非主键列 B 依赖于主键的情况。 考虑一个订单表【Order】（OrderID，OrderDate，CustomerID，CustomerName，CustomerAddr，CustomerCity）
 主键是（OrderID）。 其中 OrderDate，CustomerID，CustomerName，CustomerAddr，CustomerCity 等非主键列都完全依赖于主键（OrderID），
 所以符合 2NF。不过问题是 CustomerName，CustomerAddr，CustomerCity 直接依赖的是 CustomerID（非主键列），而不是直接依赖于主键，
 它是通过传递才依赖于主键，所以不符合 3NF。 通过拆分【Order】为【Order】（OrderID，OrderDate，CustomerID）和
-【Customer】（CustomerID，CustomerName，CustomerAddr，CustomerCity）从而达到 3NF。 第二范式（2NF）和第三范式（3NF）的概念很容易混淆，
+【Customer】（CustomerID，CustomerName，CustomerAddr，CustomerCity）从而达到3NF。 
+
+第二范式（2NF）和第三范式（3NF）的概念很容易混淆，
 区分它们的关键点在于，
 **2NF：非主键列是否完全依赖于主键，还是依赖于主键的一部分；3NF：非主键列是直接依赖于主键，还是直接依赖于非主键列**。
 
