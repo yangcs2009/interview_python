@@ -1,3 +1,21 @@
+
+<!-- vim-markdown-toc GFM -->
+* [Python设计模式](#python设计模式)
+* [创建型模式](#创建型模式)
+    * [工厂方法](#工厂方法)
+    * [抽象工厂](#抽象工厂)
+    * [惰性初始化 Lazy evaluation](#惰性初始化-lazy-evaluation)
+    * [生成器 Builder](#生成器-builder)
+    * [单例模式 Singleton](#单例模式-singleton)
+    * [原型模式](#原型模式)
+    * [对象池 Object pool](#对象池-object-pool)
+* [结构型模式](#结构型模式)
+    * [修饰模型 Decorator](#修饰模型-decorator)
+    * [代理模式 Proxy](#代理模式-proxy)
+* [行为型模式](#行为型模式)
+    * [迭代器](#迭代器)
+
+<!-- vim-markdown-toc -->
 # Python设计模式
 
 代码直戳: https://github.com/faif/python-patterns
