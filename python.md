@@ -101,7 +101,7 @@ fun(a)
 print a  # [1]
 ```
 
-这里记住的是类型是属于对象的，而不是变量。而对象有两种,“可更改”（mutable）与“不可更改”（immutable）对象。在python中，strings, tuples, 和numbers是不可更改的对象，而list,dict等则是可以修改的对象。(这就是这个问题的重点)
+这里记住的是类型是属于对象的，而不是变量。而 **对象有两种,“可更改”（mutable）与“不可更改”（immutable）对象。在python中，strings, tuples, 和numbers是不可更改的对象，而list,dict等则是可以修改的对象**。(这就是这个问题的重点)
 
 当一个引用传递给函数的时候,函数自动复制一份引用,这个函数里的引用和外边的引用没有半毛关系了.所以第一个例子里函数把引用指向了一个不可变对象,当函数返回的时候,外面的引用没半毛感觉.而第二个例子就不一样了,函数内的引用指向的是可变对象,对它的操作就和定位了指针地址一样,在内存里进行修改.
 
@@ -186,7 +186,8 @@ Python将会这样运行:
 现在的问题就是，你可以在`__metaclass__`中放置些什么代码呢？  
 答案就是：可以创建一个类的东西。
 
-那么什么可以用来创建一个类呢？type，或者任何使用到type或者子类化type的东东都可以。 
+那么什么可以用来创建一个类呢？type，或者任何使用到type或者子类化type的东东都可以。
+ 
 ###自定义元类
 **元类的主要目的就是为了当创建类时能够自动地改变类.**  
 通常，你会为API做这样的事情，你希望可以创建符合当前上下文的类.  
@@ -263,8 +264,8 @@ class UpperAttrMetaclass(type):
         return type.__new__(upperattr_metaclass, future_class_name,
                             future_class_parents, uppercase_attr)
 ```                          
-你可能已经注意到了有个额外的参数`upperattr_metaclass`，这并没有什么特别的。类方法的第一个参数总是表示当前的实例，
-就像在普通的类方法中的self参数一样。
+你可能已经注意到了有个额外的参数`upperattr_metaclass`，这并没有什么特别的。 **类方法的第一个参数总是表示当前的实例，
+就像在普通的类方法中的self参数一样。**
 
 当然了，为了清晰起见，这里的名字我起的比较长。但是就像self一样，所有的参数都有它们的传统名称。
 因此，在真实的产品代码中一个元类应该是像这样的：  
@@ -319,7 +320,7 @@ class UpperAttrMetaclass(type):
 **“元类就是深度的魔法，99%的用户应该根本不必为此操心。如果你想搞清楚究竟是否需要用到元类，那么你就不需要它。
 那些实际用到元类的人都非常清楚地知道他们需要做什么，而且根本不需要解释为什么要用元类。” —— Python界的领袖 Tim Peters**
 
-元类的主要用途是创建API。一个典型的例子是Django ORM。
+**元类的主要用途是创建API**。一个典型的例子是Django ORM。
 它允许你像这样定义：  
 ```python
 class Person(models.Model):
@@ -381,11 +382,6 @@ a=A()
 这里先理解下函数参数里面的self和cls.这个self和cls是对类或者实例的绑定,对于一般的函数来说我们可以这么调用`foo(x)`,这个函数就是最常用的,它的工作跟任何东西(类,实例)无关.对于实例方法,我们知道在类里每次定义方法的时候都需要绑定这个实例,就是`foo(self, x)`,为什么要这么做呢?因为实例方法的调用离不开实例,我们需要把实例自己传给函数,调用的时候是这样的`a.foo(x)`(其实是`foo(a, x)`).类方法一样,只不过它传递的是类而不是实例,`A.class_foo(x)`.注意这里的self和cls可以替换别的参数,但是python的约定是这俩,还是不要改的好.
 
 对于静态方法其实和普通的方法一样,不需要对谁进行绑定,唯一的区别是调用的时候需要使用`a.static_foo(x)`或者`A.static_foo(x)`来调用.
-
-|\\|实例方法|类方法|静态方法|
-|:--|:--|:--|:--|
-|a = A()|a.foo(x)|a.class_foo(x)|a.static_foo(x)|
-|A|不可用|A.class_foo(x)|A.static_foo(x)|
 
 更多关于这个问题:http://stackoverflow.com/questions/136097/what-is-the-difference-between-staticmethod-and-classmethod-in-python
 
@@ -891,4 +887,33 @@ Python中有一个被称为`Global Interpreter Lock`（GIL）的东西，它会�
 
 
 ## 34 装饰器
+
+
+## 35 `if __name__ == "__main__":`是干嘛的?
+
+```
+# Threading example
+import time, thread
+def myfunction(string, sleeptime, lock, *args):
+    while 1:
+        lock.acquire()
+        time.sleep(sleeptime)
+        lock.release()
+        time.sleep(sleeptime)
+if __name__ == "__main__":
+    lock = thread.allocate_lock()
+    thread.start_new_thread(myfunction, ("Thread #: 1", 2, lock))
+    thread.start_new_thread(myfunction, ("Thread #: 2", 2, lock))
+还有*args在这里是什么意思?
+```
+
+当Python解析器读取一个源文件时,它会执行所有的代码.在执行代码前,会定义一些特殊的变量.例如,如果解析器运行的模块(源文件)作为主程序,它将会把`__name__`变量设置成`"__main__"`.如果只是引入其他的模块,`__name__`变量将会设置成模块的名字.  
+假设下面是你的脚本,让我们作为主程序来执行:   
+```
+python threading_example.py
+```    
+当设置完特殊变量,它就会执行import语句并且加载这些模块.当遇到def代码段的时候,它就会创建一个函数对象并创建一个名叫myfunction变量指向函数对象.接下来会读取if语句并检查__name__是不是等于"__main__",如果是的话他就会执行这个代码段.
+
+**这么做的原因是有时你需要你写的模块既可以直接的执行,还可以被当做模块导入到其他模块中去.通过检查是不是主函数,可以让你的代码只在它作为主程序运行时执行,而当其他人调用你的模块中的函数的时候不必执行.**  
+如果想了解更多,请查看[这个](http://ibiblio.org/g2swap/byteofpython/read/module-name.html)
 
