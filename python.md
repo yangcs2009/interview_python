@@ -357,7 +357,12 @@ print(guy.age)
 
 ## 3 @staticmethod和@classmethod
 
-Python其实有3个方法,即静态方法(staticmethod),类方法(classmethod)和实例方法,如下:
+Python其实有3个方法,即静态方法(staticmethod),类方法(classmethod)和实例方法，  
+**Staticmethods are used to group functions which have some logical connection with a class to the class.  
+经常有一些跟类有关系的功能但在运行时又不需要实例和类参与的情况下需要用到静态方法. 比如更改环境变量或者修改其他类的属性等能用到
+静态方法. 这种情况可以直接用函数解决, 但这样同样会扩散类内部的代码，造成维护困难.**
+
+如下:
 
 ```python
 def foo(x):
@@ -387,47 +392,94 @@ a=A()
 
 ## 4 类变量和实例变量
 
-```python
-class Person:
-    name="aaa"
+###1)、类变量、实例变量概念
+类变量：
+类变量就是定义在类中，但是在函数体之外的变量。通常不使用self.变量名赋值的变量。类变量通常不作为类的实例变量的，类变量对于所有实例化的对象中是公用的。
+实例变量：
+实例变量是定义在方法中的变量，使用self绑定到实例上的变量，只是对当前实例起作用。
+###2)、访问
+类变量
+在类的内部和外部类变量都可以直接使用className.类变量的形式访问。但是在类的内部，也可以使用self.类变量来访问，但这时含义就不同了(后面使用代码验证)。
+实例变量
+在类的内部，实例变量self.实例变量的形式访问；在类的外部使用对象名.实例变量的形式访问。实例变量是绑定到一个实例上的变量，它只是属于这个绑定的实例。而类变量是所有的来自用一个类的实例所共享。我们看到这里会有这样的疑问，
+如果说类变量对所有来自这个类的所有实例所共享，那么假如我一个实例去改变了这个类变量(假设使用这样的操作object.类变量 = value)的值，那么对于其他的实例是不是都是可见的？
+答案是否定的，下面验证。
 
-p1=Person()
-p2=Person()
-p1.name="bbb"
-print p1.name  # bbb
-print p2.name  # aaa
-print Person.name  # aaa
+```   
+class A(object):
+    # 定义一个类变量，初值是10
+    class_var = 10
+    print id(class_var)
+    
+    def foo(self):
+        print '在类中访问类变量：A.class_var=', A.class_var
+        print '在类中访问实例变量： self.class_var=', self, self.class_var
+
+        # 改变实例变量的值
+        self.class_var = 40
+        print '修改后访问类变量：A.class_var=', A.class_var
+        print '修改后访问实例变量 self.class_var=',self, self.class_var
+
+        # 这里的class_var和函数外面的class_var不是同一个东西，这是一个局部变量
+        class_var = 20
+        print id(class_var)
+        print 'class_var=', class_var
+
+        
+        A.class_var = 15
+        print 'A.class_var=', A.class_var
+        print 'class_var=',class_var
+        print 'self.class_var=',self.class_var
+        
+
+obj1 = A()
+obj2 = A()
+obj3 = A()
+obj1.foo()
+print A.class_var
+print obj1.class_var
+print obj2.class_var
+print obj3.class_var
+
+
+Output:
+49964144
+在类中访问类变量：A.class_var= 10
+在类中访问实例变量： self.class_var= <__main__.A object at 0x0000000002FD2390> 10
+修改后访问类变量：A.class_var= 10
+修改后访问实例变量 self.class_var= <__main__.A object at 0x0000000002FD2390> 40
+49963904
+class_var= 20
+A.class_var= 15
+class_var= 20
+self.class_var= 40
+15
+40
+15
+15
 ```
 
-类变量就是供类使用的变量,实例变量就是供实例使用的.
+从上面运行的结果分析：当使用self.class_var形式访问类变量的之后，如果修改self.class_var的值，可以发现，类变量的值没有变化；我们修改类变量的值，发现self.class_var的值也没有受到影响。
+从最后打印obj2和obj3这两个都来自于一个类的实例中的类变量都是和修改后的类变量一样，表示他们是共享类变量的。
 
-这里`p1.name="bbb"`是实例调用了类变量,这其实和上面第一个问题一样,就是函数传参的问题,`p1.name`一开始是指向的类变量`name="aaa"`,但是在实例的作用域里把类变量的引用改变了,就变成了一个实例变量,self.name不再引用Person的类变量name了.
+###3）、总结
+1、类变量可以使用className.类变量和self.类变量两种方式访问。
+2、如果使用self.类变量的方式访问并重新赋值后，这个变量就会成为实例变量和self绑定，实际上就变成了一个实例变量，实例变量会屏蔽掉类变量的值。
+3、类变量是共享的，最好使用类名的方式来访问类变量。
+4、类变量通过sel访问时，就会被转化成实例变量，被绑定到特定的实例上。
+5、实例变量(self)的形式对类变量重新赋值后，类变量的值不会随之变化。
 
-可以看看下面的例子:
-
-```python
-class Person:
-    name=[]
-
-p1=Person()
-p2=Person()
-p1.name.append(1)
-print p1.name  # [1]
-print p2.name  # [1]
-print Person.name  # [1]
-```
-
-参考:http://stackoverflow.com/questions/6470428/catch-multiple-exceptions-in-one-line-except-block
+参考:
 
 ## 5 Python自省
 
 这个也是python彪悍的特性.
 
-自省就是面向对象的语言所写的程序在运行时,所能知道对象的类型.简单一句就是运行时能够获得对象的类型.比如type(),dir(),getattr(),hasattr(),isinstance().
+自省就是面向对象的语言所写的程序在运行时,所能知道对象的类型.简单一句就是 **运行时能够获得对象的类型**.比如type(),dir(),getattr(),hasattr(),isinstance().
 
 ## 6 字典推导式
 
-可能你见过列表推导时,却没有见过字典推导式,在2.7中才加入的:
+可能你见过列表推导式,却没有见过字典推导式,在2.7中才加入的:
 
 ```python
 d = {key: value for (key, value) in iterable}
@@ -757,7 +809,7 @@ map函数是对一个序列的每个项依次执行函数，下面是对一个�
 [2, 4, 6]
 ```
 
-reduce函数是对一个序列的每个项迭代调用函数，下面是求3的阶乘：
+reduce函数是对一个序列的每个项迭代调用函数，。reduce把一个函数作用在一个序列[x1, x2, x3...]上，这个函数必须接收 **两个参数**，reduce把结果继续和序列的下一个元素做 **累积**计算。下面是求3的阶乘：
 
 ```python
 >>> reduce(lambda x,y:x*y,range(1,4))
@@ -766,7 +818,8 @@ reduce函数是对一个序列的每个项迭代调用函数，下面是求3的�
 
 ## 23 Python里的拷贝
 
-引用和copy(),deepcopy()的区别
+引用和copy(),deepcopy()的区别  
+[参考](http://www.runoob.com/w3cnote/python-understanding-dict-copy-shallow-or-deep.html)
 
 ```python
 import copy
@@ -849,9 +902,43 @@ Note that the syntax changed in Python 3.0: you can just say super().`__init__`(
 http://stackoverflow.com/questions/576169/understanding-python-super-with-init-methods
 
 ## 30 range and xrange
-都在循环时使用，xrange内存性能更好。
-for i in range(0, 20):
-for i in xrange(0, 20):
+都在循环时使用，xrange内存性能更好。  
+这两个输出的结果都是一样的，实际上有很多不同，range会直接生成一个list对象：
+
+```
+a = range(0,100) 
+print type(a) 
+print a 
+print a[0], a[1] 
+```
+
+输出结果：
+
+```
+<type 'list'>
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99]
+0 1
+```
+
+而xrange则不会直接生成一个list，而是每次调用返回其中的一个值：
+
+```
+a = xrange(0,100) 
+print type(a) 
+print a 
+print a[0], a[1] 
+```
+
+输出结果：
+
+```
+<type 'xrange'>
+xrange(100)
+0 1
+```
+    
+所以xrange做循环的性能比range好，尤其是返回很大的时候，尽量用xrange吧，除非你是要返回一个列表。
+
 What is the difference between range and xrange functions in Python 2.X?
  range creates a list, so if you do range(1, 10000000) it creates a list in memory with 9999999 elements.
  xrange is a sequence object that evaluates lazily.
@@ -870,7 +957,7 @@ http://stackoverflow.com/questions/94935/what-is-the-difference-between-range-an
 7. Python让困难的事情变得容易，因此程序员可以专注于算法和数据结构的设计，而不用处理底层的细节。
 
 ## 32 Python和多线程（multi-threading）。这是个好主意码？列举一些让Python代码以并行方式运行的方法
-Python并不支持真正意义上的多线程。Python中提供了多线程包，但是如果你想通过多线程提高代码的速度，使用多线程包并不是个好主意。
+**Python并不支持真正意义上的多线程**。Python中提供了多线程包，但是如果你想通过多线程提高代码的速度，使用多线程包并不是个好主意。
 Python中有一个被称为`Global Interpreter Lock`（GIL）的东西，它会确保任何时候你的多个线程中，只有一个被执行。
 线程的执行速度非常之快，会让你误以为线程是并行执行的，但是实际上都是轮流执行。经过GIL这一道关卡处理，会增加执行的开销。
 这意味着，如果你想提高代码的运行速度，使用threading包并不是一个很好的方法。
