@@ -604,6 +604,7 @@ http://stackoverflow.com/questions/3394835/args-and-kwargs
 
 ## 11 面向切面编程AOP和装饰器
 
+详见34  
 这个AOP一听起来有点懵,同学面阿里的时候就被问懵了...
 
 装饰器是一个很著名的设计模式，经常被用于有切面需求的场景，较为经典的有插入日志、性能测试、事务处理等。装饰器是解决这类问题的绝佳设计，有了装饰器，我们就可以抽离出大量函数中与函数功能本身无关的雷同代码并继续重用。概括的讲，**装饰器的作用就是为已经存在的对象添加额外的功能。**
@@ -972,8 +973,32 @@ Python中有一个被称为`Global Interpreter Lock`（GIL）的东西，它会�
 
 ## 33 with
 
+with 语句适用于对资源进行访问的场合，确保不管使用过程中是否发生异常都会执行必要的“清理”操作，释放资源，比如文件使用后自动关闭、线程中锁的自动获取和释放等。
 
+[理解python的with语句](http://linbo.github.io/2013/01/08/python-with)
 ## 34 装饰器
+装饰器是一个返回函数的高阶函数，用于在代码运行期间动态增加函数功能。
+
+```
+from functools import wraps
+def memc(func):
+    cache = {}
+    miss = object()
+    @wraps(func)
+    def wrapper(*args):
+        result = cache.get(args, miss)
+        if result is miss:
+            result = func(*args)
+            cache[args] = result
+        return result
+    return wrapper
+@memc
+def fib(n):
+    if n < 2:
+        return n
+    return fib(n-1) + fib(n-2)
+print fib(4)
+```
 
 
 ## 35 `if __name__ == "__main__":`是干嘛的?
