@@ -103,23 +103,23 @@ f = lambda n: 1 if n < 2 else f(n - 1) + f(n - 2)
 使用Step-wise线性搜索。
 
 ```python
-def get_value(l, r, c):
-    return l[r][c]
-
-def find(l, x):
-    m = len(l) - 1
-    n = len(l[0]) - 1
-    r = 0
-    c = n
-    while c >= 0 and r <= m:
-        value = get_value(l, r, c)
-        if value == x:
+def find_number(l, rows, columns, target):
+    if not l:
+        return False
+    row = 0
+    column = columns - 1
+    while row < rows and column >= 0:
+        if target == l[row][column]:
             return True
-        elif value > x:
-            c = c - 1
-        elif value < x:
-            r = r + 1
+        elif target > l[row][column]:
+            row += 1
+        else:
+            column -= 1
     return False
+
+test = [[1, 5, 7], [3, 6, 8], [4, 9, 10]]
+
+print find_number(test, 3, 3, 2)
 ```
 
 ## 5 去除列表中的重复元素
@@ -536,5 +536,36 @@ class Anagram:
 
     print(Solution3('apple','pleap'))
 
+```
+
+## 23 split python实现
+
+```python
+
+\#encoding=utf-8
+
+
+def split_new(string, key):
+    """
+    :param string: 要分割的串
+    :param key: 按该串分割
+    :return: 返回分割后的list
+    """
+    # string = string
+    result = []
+    lengstring = len(string)  # 计算串的长度
+    lengchar = len(key)  # 计算分割符的长度
+    for i in range(lengstring):
+        index = string.find(key)  # 找到第一个出现key的坐标，如果没有找到，find返回-1
+        if index == -1:
+            result.append(string)
+            return result
+        else:
+            result.append(string[:index])  # 取第一次出现key(不包含key)的前面部分
+            string = string[index + lengchar:]  # 把第一次出现key(不包含key)的后面部分重新赋值给string
+
+
+if __name__ == "__main__":
+    print split_new("ABCDEFGAA@@ABCDEFGA@@ABCDEFG", "A")
 ```
 
