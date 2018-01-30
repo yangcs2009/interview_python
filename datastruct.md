@@ -542,7 +542,7 @@ class Anagram:
 
 ```python
 
-\#encoding=utf-8
+#encoding=utf-8
 
 
 def split_new(string, key):
