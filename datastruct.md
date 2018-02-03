@@ -569,3 +569,40 @@ if __name__ == "__main__":
     print split_new("ABCDEFGAA@@ABCDEFGA@@ABCDEFG", "A")
 ```
 
+## 24 求一个正整数中1的个数
+```python
+def count1(num):
+    cnt = 0
+    while num:
+        if num & 1:
+            cnt += 1
+        num >>= 1
+    return cnt
+
+print count1(6)
+```
+
+## 25 求一个数组最大连续子序列之和
+O(N)的时间。最大连续子序列和只可能是以位置0～n-1中某个位置结尾。当遍历到第i个元素时，判断在它前面的连续子序列和是否大于0，
+如果大于0，则以位置i结尾的最大连续子序列和为元素i和前面连续子序列和相加；否则，则以位置i结尾的最大连续子序列和为元素i。
+
+```python
+def sum1(l):
+    tmp_sum = 0
+    max_sum = 0
+    for i in l:
+        tmp_sum += i
+        if tmp_sum < 0:
+            tmp_sum = 0
+        else:
+            if tmp_sum > max_sum:
+                max_sum = tmp_sum
+    return max_sum
+
+if __name__ == "__main__":
+    test = [1, -5, 8, 3, -4, 15, -8]
+    print sum1(test)
+```
+
+## 26 二叉树最近公共祖先
+[二叉树最近公共祖先详解](https://www.hrwhisper.me/algorithm-lowest-common-ancestor-of-a-binary-tree/)

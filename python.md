@@ -539,11 +539,40 @@ http://stackoverflow.com/questions/5082452/python-string-formatting-vs-format
 
 ## 9 迭代器和生成器
 
+[生成器](https://www.liaoxuefeng.com/wiki/001374738125095c955c1e6d8bb493182103fac9270762a000/00138681965108490cb4c13182e472f8d87830f13be6e88000)
+
 [聊聊 Python 中生成器和协程那点事儿](http://manjusaka.itscoder.com/2016/09/11/something-about-yield-in-python/)
 
 这个是stackoverflow里python排名第一的问题,值得一看: http://stackoverflow.com/questions/231767/what-does-the-yield-keyword-do-in-python
 
 这是中文版: http://taizilongxu.gitbooks.io/stackoverflow-about-python/content/1/README.html
+
+生成器的两种生成方式
+要创建一个generator，有很多种方法。第一种方法很简单，只要把一个列表生成式的[]改成()，就创建了一个generator：
+
+```python
+>>> L = [x * x for x in range(10)]
+>>> L
+[0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
+>>> g = (x * x for x in range(10))
+>>> g
+<generator object <genexpr> at 0x104feab40>
+```  
+
+```python
+def fib(max):
+    n, a, b = 0, 0, 1
+    while n < max:
+        yield b
+        a, b = b, a + b
+        n = n + 1
+```     
+这就是定义generator的另一种方法。如果一个函数定义中包含 **yield**关键字，那么这个函数就不再是一个普通函数，而是一个generator：
+
+```python
+>>> fib(6)
+<generator object fib at 0x104feaaa0>
+```
 
 ## 10 `*args` and `**kwargs`
 
