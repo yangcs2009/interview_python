@@ -9,6 +9,9 @@
         * [为什么要用metaclass类而不是函数?](#为什么要用metaclass类而不是函数)
     * [3 @staticmethod和@classmethod](#3-staticmethod和classmethod)
     * [4 类变量和实例变量](#4-类变量和实例变量)
+        * [1)、类变量、实例变量概念](#1类变量实例变量概念)
+        * [2)、访问](#2访问)
+        * [3）、总结](#3总结)
     * [5 Python自省](#5-python自省)
     * [6 字典推导式](#6-字典推导式)
     * [7 Python中单下划线和双下划线](#7-python中单下划线和双下划线)
@@ -46,6 +49,7 @@
     * [32 Python和多线程（multi-threading）。这是个好主意码？列举一些让Python代码以并行方式运行的方法](#32-python和多线程multi-threading这是个好主意码列举一些让python代码以并行方式运行的方法)
     * [33 with](#33-with)
     * [34 装饰器](#34-装饰器)
+    * [35 `if __name__ == "__main__":`是干嘛的?](#35-if-__name__--__main__是干嘛的)
 
 <!-- vim-markdown-toc -->
 # Python语言特性

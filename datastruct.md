@@ -25,6 +25,12 @@
     * [20 前序中序求后序](#20-前序中序求后序)
     * [21 单链表逆置](#21-单链表逆置)
     * [22 两个字符串是否是变位词](#22-两个字符串是否是变位词)
+    * [23 split python实现](#23-split-python实现)
+    * [24 求一个正整数中1的个数](#24-求一个正整数中1的个数)
+    * [25 求一个数组最大连续子序列之和](#25-求一个数组最大连续子序列之和)
+    * [26 二叉树最近公共祖先](#26-二叉树最近公共祖先)
+    * [27 全排列算法](#27-全排列算法)
+    * [LRU Cache设计](#lru-cache设计)
 
 <!-- vim-markdown-toc -->
 # 数据结构
@@ -606,3 +612,80 @@ if __name__ == "__main__":
 
 ## 26 二叉树最近公共祖先
 [二叉树最近公共祖先详解](https://www.hrwhisper.me/algorithm-lowest-common-ancestor-of-a-binary-tree/)
+
+## 27 全排列算法
+
+方法一：使用python库函数  
+```python
+from itertools import permutations
+
+a = ['a', 'b', 'c']
+result = permutations(a)
+for i in result:
+    print i
+    
+('a', 'b', 'c')
+('a', 'c', 'b')
+('b', 'a', 'c')
+('b', 'c', 'a')
+('c', 'a', 'b')
+('c', 'b', 'a')
+```
+
+方法二：求给定数组的全排列，可将其模拟为某个袋子里有编号为1到 n 的球，将其放入 n 个不同的盒子怎么放？
+基本思路就是从袋子里逐个拿球放入盒子，直到袋子里的球拿完为止，拿完时即为一种放法。  
+```python
+class Solution:
+    # @param {integer[]} nums
+    # @return {integer[][]}
+    def permute(self, nums):
+        if nums is None:
+            return [[]]
+        elif len(nums) <= 1:
+            return [nums]
+
+        result = []
+        for i, item in enumerate(nums):
+            for p in self.permute(nums[:i] + nums[i + 1:]):
+                result.append(p + [item])
+
+        return result
+```
+
+[更多方法参考](https://github.com/billryan/algorithm-exercise/blob/master/zh-hans/exhaustive_search/permutations.md)
+
+
+## LRU Cache设计
+
+```python
+# 使用collections.OrderedDict实现
+# OrderedDict是有序字典。
+
+from collections import OrderedDict
+class LRUCache:
+    def __init__(self, size=100):
+        self._size = size
+        self._od = OrderedDict()
+    def move_to_tail(self, key):
+        self._od.move_to_end(key, last=True)
+    def get(self, key):
+        value = self._od.get(key, None)
+        if value is not None:
+            self.move_to_tail(key)
+            return value
+    def set(self, key, value):
+        temp = self._od.get(key, None)
+        if temp is not None:
+            self._od[key] = value
+            self.move_to_tail(key)
+            return
+
+        if self._size == len(self._od):
+            self._od.popitem(last=False) # delete the oldest item
+        self._od[key] = value
+        self.move_to_tail(key)
+
+# OrderedDict中的move_to_end可以通过移动键的序列到尾部来管理键的新旧。
+```
+
+[更多参考](https://allenwind.github.io/2017/09/17/LRU%E7%AE%97%E6%B3%95%E7%9A%84%E5%AE%9E%E7%8E%B0%EF%BC%88Python%E7%89%88%EF%BC%89/)
