@@ -118,7 +118,7 @@ MYSQL支持4中隔离界别，默认的是`REPEATED READ`
 那么在这两列上创建多列索引将很有意义。
 
 ## 3 Redis原理
-
+[缓存那些事](https://tech.meituan.com/cache_about.html)
 
 ## 4 乐观锁和悲观锁
 
