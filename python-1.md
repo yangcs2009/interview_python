@@ -476,7 +476,7 @@ shutil.copyfile('a.py', 'copy_a.py')
 ```
 
 ## 【题目:034】|  Python判断当前用户是否是root  
-````python
+```python
 import os  
 if os.getuid() != 0:    # root账号的uid=0  
     print os.getuid()  
