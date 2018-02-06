@@ -91,7 +91,7 @@ Although practicality beats purity.
 Errors should never pass silently.    
 Unless explicitly silenced.    
 In the face of ambiguity, refuse the temptation to guess.    
-There should be one-- and preferably only one --obvious way to do it.    
+There should be one -- and preferably only one -- obvious way to do it.    
 Although that way may not be obvious at first unless you're Dutch.    
 Now is better than never.    
 Although never is often better than *right* now.    
@@ -923,7 +923,7 @@ arr.DisplayItems()
 #destructor  
 ```
  
-##【题目:053】| Python如何实现单例模式
+## 【题目:053】| Python如何实现单例模式
 ```python
 #-*- encoding=utf-8 -*-  
 print '----------------------方法1--------------------------'  
