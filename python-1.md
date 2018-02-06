@@ -138,24 +138,24 @@ pdb模块也可以做调试。
 PyChecker是一个python代码的静态分析工具，它可以帮助查找python代码的bug, 会对代码的复杂度和格式提出警告    
 Pylint   是另外一个工具可以进行coding standard检查。   
 
-##【题目:004】| 你在github上都fork过哪些python库，列举一下你经常使用的，每个库用一句话描述下其功能
+## 【题目:004】| 你在github上都fork过哪些python库，列举一下你经常使用的，每个库用一句话描述下其功能
 
 http://rogerdudler.github.io/git-guide/index.zh.html    #关于git简明指南    
 http://www.zhihu.com/question/20070065                  #关于git的BBS    
 http://www.techug.com/githug-for-designer               #关于github的    
 
-##【题目:005】|  什么是GIL?
+## 【题目:005】|  什么是GIL?
 什么是GIL(Global Interpreter Lock)全局解释器锁? 简单地说就是:  
 每一个interpreter进程,只能同时仅有一个线程来执行, 获得相关的锁, 存取相关的资源.  
 那么很容易就会发现,如果一个interpreter进程只能有一个线程来执行,   
 多线程的并发则成为不可能, 即使这几个线程之间不存在资源的竞争.  
 从理论上讲,我们要尽可能地使程序更加并行, 能够充分利用多核的功能.  
 
-##【题目:006】|  什么是元类(meta_class)?
+## 【题目:006】|  什么是元类(meta_class)?
 元类就是用来创建类的“东西”  
 [详情操作](http://blog.jobbole.com/21351/）  
 
-##【题目:007】|  对比一下dict中items与iteritems?
+## 【题目:007】|  对比一下dict中items与iteritems?
 
 ```python
 >>> D = {'a':1,'b':2,'c':3,'d':4}    
@@ -176,7 +176,7 @@ a c b d
 1. 一般iteritems()迭代的办法比items()要快，特别是数据库比较大时。  
 2. 在Python3中一般取消前者函数  
 
-##【题目:008】|  是否遇到过python的模块间循环引用的问题，如何避免它?
+## 【题目:008】|  是否遇到过python的模块间循环引用的问题，如何避免它?
 
 这是代码结构设计的问题，模块依赖和类依赖  
 如果老是觉得碰到循环引用，很可能是模块的分界线划错地方了。可能是把应该在一起的东西硬拆开了，可能是某些职责放错地方了，可能是应该抽象的东西没抽象  
@@ -186,7 +186,7 @@ a c b d
 1. 使用 “__all__” 白名单开放接口  
 2. 尽量避免 import  
 
-##【题目:009】|  有用过with statement吗？它的好处是什么？
+## 【题目:009】|  有用过with statement吗？它的好处是什么？
 
 ```python
 >>> with open('text.txt') as myfile:    
@@ -215,7 +215,7 @@ if __name__=='__main__':
     print fibs(num)
 ```
       
-##【题目:011】|  Python里如何生产随机数
+## 【题目:011】|  Python里如何生产随机数
 
 ```python
 >>> import random  
@@ -227,7 +227,7 @@ if __name__=='__main__':
 3
 ```
   
-##【题目:012】|  Python里如何反序的迭代一个序列
+## 【题目:012】|  Python里如何反序的迭代一个序列
 
 ```python
 # 如果是一个list, 最快的解决方案是：  
@@ -244,7 +244,7 @@ for i in range(len(sequence)-1, -1, -1):
 x = sequence[i]  
 ```
 
-##【题目:013】|  Python中如何定义一个函数
+## 【题目:013】|  Python中如何定义一个函数
 
 ```python
 def func(arg, *args, **kwagrs):   #普通函数  
@@ -254,7 +254,7 @@ def func(arg, *args, **kwagrs):   #普通函数
 lambda x: x **2                   #匿名函数  
 ```
  
-##【题目:015】|  Python里面search()和match()的区别
+## 【题目:015】|  Python里面search()和match()的区别
 ```python
 >>> import re  
 >>> re.match(r'python','Programing Python, should be pythonic')  
@@ -266,7 +266,7 @@ lambda x: x **2                   #匿名函数
 #re.search匹配整个字符串，直到找到一个匹配。  
 ```
 
-##【题目:016】|  Python程序中文输出问题怎么解决
+## 【题目:016】|  Python程序中文输出问题怎么解决
 在Python3中，对中文进行了全面的支持，但在Python2.x中需要进行相关的设置才能使用中文。否则会出现乱码。  
 Python默认采取的ASCII编码，字母、标点和其他字符只使用一个字节来表示，但对于中文字符来说，一个字节满足不了需求。  
 为了能在计算机中表示所有的中文字符，中文编码采用两个字节表示。如果中文编码和ASCII混合使用的话，就会导致解码错误，从而才生乱码。  
@@ -284,7 +284,7 @@ py脚本文件中：跨字符集必须做设置，否则乱码
 2. 其次需将文件保存为UTF-8的格式！  
 3. 最后: s.decode('utf-8').encode('gbk')  
 
-##【题目:017】|  什么是lambda函数
+## 【题目:017】|  什么是lambda函数
 
 函数使用:  
 1. 代码块重复，这时候必须考虑到函数，降低程序的冗余度  
@@ -299,7 +299,7 @@ Python有两种函数,一种是def定义，一种是lambda函数()
 [2, 3, 5, 7, 11, 13, 17, 19]  
 ```
 
-##【题目:018】|  Python里面如何实现tuple和list的转换  
+## 【题目:018】|  Python里面如何实现tuple和list的转换  
 ```python
 #From list to Tuple                   
 tuple(a_list)     
@@ -309,7 +309,7 @@ def to_list(t):
     return [i if not isinstance(i,tuple) else to_list(i) for i in t]  
 ```
 
-##【题目:019】|  请写出一段Python代码实现删除一个list里面的重复元素  
+## 【题目:019】|  请写出一段Python代码实现删除一个list里面的重复元素  
 ```python
 >>> L1 = [4,1,3,2,3,5,1]  
 >>> L2 = []  
@@ -318,7 +318,7 @@ def to_list(t):
 [4, 1, 3, 2, 5]  
 ```
 
-##【题目:020】|  Python是如何进行类型转换的  
+## 【题目:020】|  Python是如何进行类型转换的  
 ```python
 >>> int('1234')                   # 将数字型字符串转为整形  
 1234  
@@ -355,7 +355,7 @@ hex(x)                      将一个整数转换为一个十六进制字符串
 oct(x)                      将一个整数转换为一个八进制字符串  
 ```
 
-##【题目:021】|  如何知道一个Python对象的类型  
+## 【题目:021】|  如何知道一个Python对象的类型  
 ```python
 >>> type([]);type('');type(0);type({});type(0.0);type((1,))  
 <type 'list'>  
@@ -366,17 +366,17 @@ oct(x)                      将一个整数转换为一个八进制字符串
 <type 'tuple'>  
 ```
 
-##【题目:022】|  Python里面如何拷贝一个对象
+## 【题目:022】|  Python里面如何拷贝一个对象
 
 切片S[:]  # 注不能应用于字典  
 深浅拷贝  # 能应用于所有序列和字典  
 1. 浅拷贝D.copy()方法  
 2. 深拷贝deepcopy(D)方法  
 
-##【题目:023】|  Python中pass语句的作用是什么
+## 【题目:023】|  Python中pass语句的作用是什么
 pass语句什么也不做,一般作为占位符或者创建占位程序  
 
-##【题目:024】|  写一段程序逐行读入一个文本文件，并在屏幕上打印出来
+## 【题目:024】|  写一段程序逐行读入一个文本文件，并在屏幕上打印出来
 ```python
 f = open(filename)    
 while True:    
@@ -386,13 +386,13 @@ while True:
 f.close()   
 ```
  
-##【题目:025】|  如何用Python删除一个文件
+## 【题目:025】|  如何用Python删除一个文件
 ```python
 import os  
 os.remove(filename)  
 ```
 
-##【题目:026】|  Python代码得到列表list的交集与差集
+## 【题目:026】|  Python代码得到列表list的交集与差集
 ```python
 >>> list1 = [1, 3, 4, 6]  
 >>> list2 = [1, 2, 3, 4]  
@@ -402,11 +402,11 @@ os.remove(filename)
 [1, 3, 4]  
 ```
 
-##【题目:027】|  Python是如何进行内存管理的
+## 【题目:027】|  Python是如何进行内存管理的
 python内部使用引用计数，来保持追踪内存中的对象，Python内部记录了对象有多少个引用，即引用计数，当对象被创建时就创建了一个引用计数，当对象不再需要时，
 这个对象的引用计数为0时，它被垃圾回收。所有这些都是 **自动完成**，不需要像C一样，人工干预，从而提高了程序员的效率和程序的健壮性。  
 
-##【题目:028】|  介绍一下Python下range()函数的用法  
+## 【题目:028】|  介绍一下Python下range()函数的用法  
 ```python
 >>> range(10)  
 [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]  
@@ -420,7 +420,7 @@ python内部使用引用计数，来保持追踪内存中的对象，Python内�
 相区别的是xrange(),每次只取出一个迭代对象，如果是数据量比较大时，效率较高  
 在Python3中，没有xrange()函数，其功能放在了range()函数上  
 
-##【题目:029】|  Python异常处理介绍一下
+## 【题目:029】|  Python异常处理介绍一下
 
 程序中出现异常情况时就需要异常处理。比如当你打开一个不存在的文件时。当你的程序中有  
 一些无效的语句时，Python会提示你有错误存在。下面是一个拼写错误的例子，print写成了Print  
@@ -437,7 +437,7 @@ python内部使用引用计数，来保持追踪内存中的对象，Python内�
 try/finally语句可确保一定会进行需要的结束运算，无论程序是否有异常  
 5. 非常规控制流程  
 
-##【题目:030】|  介绍一下Python中的filter方法
+## 【题目:030】|  介绍一下Python中的filter方法
 filter就像map,reduce,apply,zip等都是内置函数，用C语言实现，具有速度快，功能强大等  
   
 优点:  
@@ -446,7 +446,7 @@ filter就像map,reduce,apply,zip等都是内置函数，用C语言实现，具�
 第一个参数: function or None, 函数或None  
 第二个参数: sequence,序列  
 
-##【题目:031】|  介绍一下except的用法和作用
+## 【题目:031】|  介绍一下except的用法和作用
 try/except:          捕捉由PYTHON自身或写程序过程中引发的异常并恢复  
 except:              捕捉所有其他异常  
 except name:         只捕捉特定的异常  
@@ -456,7 +456,7 @@ except (name1,name2),value: 捕捉任何列出的异常，并取得额外数据
 else:                如果没有引发异常就运行  
 finally:             总是会运行此处代码  
 
-##【题目:032】|  如何用Python来进行查询和替换一个文本字符串
+## 【题目:032】|  如何用Python来进行查询和替换一个文本字符串
 ```python
 >>> words = 'Python is a very funny language!'  
 >>> words.find('Python')             # 返回的为0或正数时，为其索引号  
@@ -469,13 +469,13 @@ finally:             总是会运行此处代码
 'Perl is a very funny language!'  
 ```
 
-##【题目:033】|  Python如何copy一个文件
+## 【题目:033】|  Python如何copy一个文件
 ```python
 import shutil  
 shutil.copyfile('a.py', 'copy_a.py')  
 ```
 
-##【题目:034】|  Python判断当前用户是否是root  
+## 【题目:034】|  Python判断当前用户是否是root  
 ````python
 import os  
 if os.getuid() != 0:    # root账号的uid=0  
@@ -485,7 +485,7 @@ else:
     print 'Hello, Root!'  
 ```
 
-##【题目:035】|  用Python写一个for循环的例子  
+## 【题目:035】|  用Python写一个for循环的例子  
 for循环可以遍历序列(列表，字符串，元祖),range()及迭代对象，如xrange()  
 ```python
 names = ['Alice', 'Betty', 'Fred', 'Tom']  
@@ -499,7 +499,7 @@ index: 2 => Fred
 index: 3 => Tom  
 ```
 
-##【题目:036】|  介绍一下Python中webbrowser的用法
+## 【题目:036】|  介绍一下Python中webbrowser的用法
 webbrowser模块提供了一个高级接口来显示基于Web的文档，大部分情况下只需要简单的调用open()方法。  
   
 webbrowser定义了如下的异常：exception webbrowser.Error, 当浏览器控件发生错误是会抛出这个异常  
@@ -521,7 +521,7 @@ webbrowser.get([name]) 根据name返回一个浏览器对象，如果name为空�
 webbrowser.register(name, construtor[, instance])  
 注册一个名字为name的浏览器，如果这个浏览器类型被注册就可以用get()方法来获取。  
 
-##【题目:037】|  默写尽可能多的str对象的方法
+## 【题目:037】|  默写尽可能多的str对象的方法
 ```python
 #方法                                   #描述    
 -------------------------------------------------------------------------------------------------    
@@ -563,10 +563,10 @@ S.title()                               #返回S的副本，所有单词以大�
 S.translate(table[,deletechars])        #返回S的副本，所有字符都使用table进行的转换，可选择删除出现在deletechars中的所有字符    
 ```
 
-##【题目:038】|  现在有一个dict对象adict,里面包含了一百万个元素,查找其中的某个元素的平均需要多少次比较
+## 【题目:038】|  现在有一个dict对象adict,里面包含了一百万个元素,查找其中的某个元素的平均需要多少次比较
 O(1)  哈希字典，快速查找，键值映射，键唯一!  
 
-##【题目:039】|  有一个list对象alist，里面的所有元素都是字符串，编写一个函数对它实现一个大小写无关的排序  
+## 【题目:039】|  有一个list对象alist，里面的所有元素都是字符串，编写一个函数对它实现一个大小写无关的排序  
 ```python
 words = ['This','is','a','dog','!']  
 words.sort(key=lambda x:x.lower())  
@@ -576,7 +576,7 @@ print words
 ['!', 'a', 'dog', 'is', 'This']  
 ```
 
-##【题目:040】|  有一个排好序地list对象alist，查找其中是否有某元素a  
+## 【题目:040】|  有一个排好序地list对象alist，查找其中是否有某元素a  
 
 ```python
 alist = ['a','s','d','f']  
@@ -588,7 +588,7 @@ except ValueError:
     print 'Not Found.'  
 ```
 
-##【题目:041】|  请用Python写一个获取用户输入数字，并根据数字大小输出不同信息的脚本  
+## 【题目:041】|  请用Python写一个获取用户输入数字，并根据数字大小输出不同信息的脚本  
 ```python
 num = input('Enter number: ')  
   
@@ -602,7 +602,7 @@ else:
     print 'Not a number'  
 ```
 
-##【题目:042】|  打乱一个排好序的list对象alist
+## 【题目:042】|  打乱一个排好序的list对象alist
 ```python
 # random模块中的shuffle(洗牌函数)  
 import random  
@@ -611,7 +611,7 @@ random.shuffle(alist)
 print alist  
 ```
 
-##【题目:043】|  有二维的list对象alist，假定其中的所有元素都具有相同的长度，写一段程序根据元素的第二个元素排序
+## 【题目:043】|  有二维的list对象alist，假定其中的所有元素都具有相同的长度，写一段程序根据元素的第二个元素排序
 ```python
 def sort_lists(lists, sord, idx):  
     if sord == 'desc':  
@@ -628,7 +628,7 @@ print lists
 [['ef', 'ac'], ['cd', 'ab']]  
 ```
 
-##【题目:044】|  inspect模块有什么用
+## 【题目:044】|  inspect模块有什么用
 inspect模块提供了一系列函数用于帮助使用自省。  
   
 检查对象类型  
@@ -642,7 +642,7 @@ get{file|sourcefile}(object): 获取object的定义所在的模块的文件名|�
 get{source|sourcelines}(object): 获取object的定义的源代码，以字符串|字符串列表返回。  
 getargspec(func): 仅用于方法，获取方法声明的参数，返回元组，分别是(普通参数名的列表, *参数名, **参数名, 默认值元组)。   
 
-##【题目:045】|  Python处理命令行参数示例代码
+## 【题目:045】|  Python处理命令行参数示例代码
 ```python
 # 最简单、最原始的方法就是手动解析了  
 import sys  
@@ -650,7 +650,7 @@ for arg in sys.argv[1:]:
     print(arg)  
 ```
 
-##【题目:046】|  介绍一下Python getopt模块  
+## 【题目:046】|  介绍一下Python getopt模块  
 ```python
 # getopt模块是原来的命令行选项解析器，支持UNIX函数getopt()建立的约定。  
 # 它会解析一个参数序列，如sys.argv，并返回一个元祖序列和一个非选项参数序列。  
@@ -671,11 +671,11 @@ except getopt.GetoptError as err:
 2.  getopt不检查额外参数的合法性，需要自行检查           
 3.  短命令行和长命令行是分开解析的</span>  
 
-##【题目:047】|  Python列表与元组的区别是什么？分别在什么情况下使用？
+## 【题目:047】|  Python列表与元组的区别是什么？分别在什么情况下使用？
 Python中列表和元组都是序列，因此都能进行添加，删除，更新，切片等操作。但列表是可变对象，元祖是不可变对象。  
 元组主要用于函数赋值，字符串格式化等。但列表中的方法更多些，也是PYTHON中更常用的数据结构。  
 
-##【题目:048】|  有一个长度是101的数组，存在1~100的数字，有一个是重复的，拿重复的找出来
+## 【题目:048】|  有一个长度是101的数组，存在1~100的数字，有一个是重复的，拿重复的找出来
 ```python
 # Python中，主要是拿count(i) ==2的找出来即可，再利用列表推导式  
 >>> l = [1, 2, 3, 4, 2]  
@@ -688,7 +688,7 @@ Python中列表和元组都是序列，因此都能进行添加，删除，更�
 set([2])  
 ```
 
-##【题目:049】|  set是在哪个版本成为build-in types的？举例说明,并说明为什么当时选择了set这种数据结构
+## 【题目:049】|  set是在哪个版本成为build-in types的？举例说明,并说明为什么当时选择了set这种数据结构
 
 
 python的set和其他语言类似, 是一个 **无序不重复元素集**, 基本功能包括关系测试和消除重复元素. 集合对象还支持union(联合), intersection(交), difference(差)和sysmmetric difference(对称差集)等数学运算.  
@@ -851,7 +851,7 @@ s.clear()
   
 还请注意：这个模块还包含一个 union_update() 方法，它是 update() 方法的一个别名。包含这个方法是为了向后兼容。程序员们应该多使用 update() 方法，因为这个方法也被内置的 set() 和 frozenset() 类型支持。  
 
-##【题目:050】| 说说decorator的用法和它的应用场景，如果可以的话，写一个decorator  
+## 【题目:050】| 说说decorator的用法和它的应用场景，如果可以的话，写一个decorator  
 所谓装饰器就是把函数包装一下，为函数添加一些附加功能，装饰器就是一个函数，参数为被包装的函数，返回包装后的函数：  
 ```python  
 def d(fp):  
@@ -871,7 +871,7 @@ def f():
 f()#调用f  
 ```
 
-##【题目:051】| 写一个类，并让它尽可能多的支持操作符  
+## 【题目:051】| 写一个类，并让它尽可能多的支持操作符  
 ```python
 class Array:  
     __list = []  
@@ -1064,7 +1064,7 @@ print two.x
 #1  
 ```
 
-##【题目:056】| 介绍一下Python Date Time方面的类
+## 【题目:056】| 介绍一下Python Date Time方面的类
 
 一.time模块  
 time模块提供各种操作时间的函数  
@@ -1084,7 +1084,7 @@ datetime.tzinfo：与时区有关的相关信息。
 datetime中，表示日期时间的是一个datetime对象  
 datetime中提供了strftime方法，可以将一个datetime型日期转换成字符串：  
 
-##【题目:057】| 写一个简单的Python socket编程
+## 【题目:057】| 写一个简单的Python socket编程
 
 服务器端程序:  
 ```python
@@ -1128,13 +1128,13 @@ sock.close()
 如果更改client.py的sock.send('1')为其它值在终端会打印“Please, Go Out...”。  
 更改time.sleep(2)为大于5的数值， 服务器将会超时。
 
-##【题目:058】| Tkinter的ToolTip控件
+## 【题目:058】| Tkinter的ToolTip控件
 
 Tooltip控件是一个简单，但非常有用的控件。它能够为我们的软件提供非常漂亮的提示信息，提高软件的可用性，给用户比较好的体验。  
 假设现在有两个按钮，一个用来预览吊线世系图，一个用来预览行转。为了保持按钮文本的简洁，以及为按钮尺寸所限。  
 我们不能可能把这个按钮的主要功能通过text属性表述清楚，这个时候我们就可以用到tooltip控件了.  
 
-##【题目:059】| 解释一下python的and-or语法
+## 【题目:059】| 解释一下python的and-or语法
 
 0 and ＊ 不需要再考虑＊是0还是1，结果是0  
 1 and ＊ 需要考虑＊是0还是1来决定结果。  
@@ -1150,10 +1150,10 @@ and-or主要是用来模仿 三目运算符 bool?a:b的，即当表达式bool为
   
 and-or 技巧，bool and a or b 表达式，当 a 在布尔上下文中的值为假时，不会像 C 语言表达式 bool ? a : b 那样工作。  
 
-##【题目:060】| Python里关于“堆”这种数据结构的模块是哪个？“堆”有什么优点和缺点
+## 【题目:060】| Python里关于“堆”这种数据结构的模块是哪个？“堆”有什么优点和缺点
 这个真没有！ 
 
-##【题目:061】| 实现一个stack  
+## 【题目:061】| 实现一个stack  
 ```python
 class Stack :  
     def __init__( self ):  
@@ -1183,7 +1183,7 @@ class Stack :
         self._items.append( item )  
 ```
 
-##【题目:062】| 编写一个简单的ini文件解释器
+## 【题目:062】| 编写一个简单的ini文件解释器
 
 db_config.ini  
 ```python
@@ -1227,7 +1227,7 @@ if __name__ == "__main__":
     test("../conf/db_config.ini")
 ```
 
-##【题目:064】| src = "security/afafsff/?ip=123.4.56.78&id=45"，请写一段代码用正则匹配出IP  
+## 【题目:064】| src = "security/afafsff/?ip=123.4.56.78&id=45"，请写一段代码用正则匹配出IP  
 ```python
 import re  
   
@@ -1239,7 +1239,7 @@ print m.group(1)
 123.4.56.78  
 ```
 
-##【题目:064】| 已知仓库中有若干商品，以及相应库存，类似：
+## 【题目:064】| 已知仓库中有若干商品，以及相应库存，类似：
 袜子，10  
 鞋子，20  
 拖鞋，30  
