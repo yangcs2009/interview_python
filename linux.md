@@ -30,7 +30,7 @@
 
 <!-- vim-markdown-toc -->
 
-# *UNIX/Linux
+# UNIX/Linux
 
 ## 1、unix进程间通信方式(IPC)
 
@@ -500,7 +500,7 @@ linux上面创建进程的代价比较小，但仍旧是不可忽视的，加上
 如果没有大量的idle-connection或者dead-connection，epoll的效率并不会比select/poll高很多，但是当遇到大量的
 idle-connection，就会发现epoll的效率大大高于select/poll。
 
-###参考
+### 参考
 [用户空间与内核空间，进程上下文与中断上下文[总结]](http://www.cnblogs.com/Anker/p/3269106.html)  
 [进程切换](http://guojing.me/linux-kernel-architecture/posts/process-switch/)  
 [维基百科-文件描述符](https://zh.wikipedia.org/wiki/%E6%96%87%E4%BB%B6%E6%8F%8F%E8%BF%B0%E7%AC%A6)  
