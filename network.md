@@ -253,12 +253,12 @@ HTTP/1.1 200 OK
 Date: Fri, 22 May 2009 06:07:21 GMT
 Content-Type: text/html; charset=UTF-8
 
-<html>
-      <head></head>
-      <body>
-            <!--body goes here-->
-      </body>
-</html>
+\<html\>
+      \<head></head>
+      \<body>
+            \<!--body goes here-->
+      \</body>
+\</html>
 ```  
 
 第一部分：状态行，由HTTP协议版本号， 状态码， 状态消息 三部分组成。
@@ -298,7 +298,7 @@ Date:生成响应的日期和时间；Content-Type:指定了MIME类型的HTML(te
 HTTP1.0定义了三种请求方法： GET, POST 和 HEAD方法。  
 HTTP1.1新增了五种请求方法：OPTIONS, PUT, DELETE, TRACE 和 CONNECT 方法。  
 ```
-GET  请求指定的页面信息，并返回实体主体。
+GET      请求指定的页面信息，并返回实体主体。
 HEAD     类似于get请求，只不过返回的响应中没有具体的内容，用于获取报头
 POST     向指定资源提交数据进行处理请求（例如提交表单或者上传文件）。数据被包含在请求体中。POST请求可能会导致新的资源的建立和/或已有资源的修改。
 PUT      从客户端向服务器传送的数据取代指定的文档的内容。
@@ -314,7 +314,7 @@ HTTP协议定义Web客户端如何从Web服务器请求Web页面，以及服务�
 
 以下是 HTTP 请求/响应的步骤：  
 #### 1、客户端连接到Web服务器
-一个HTTP客户端，通常是浏览器，与Web服务器的HTTP端口（默认为80）建立一个TCP套接字连接。例如，http://www.oakcms.cn。
+一个HTTP客户端，通常是浏览器，与Web服务器的HTTP端口（默认为80）建立一个TCP套接字连接。例如，http://www.oakcms.cn
 
 #### 2、发送HTTP请求
 通过TCP套接字，客户端向Web服务器发送一个文本的请求报文，一个请求报文由请求行、请求头部、空行和请求数据4部分组成。
@@ -376,7 +376,7 @@ POST提交：把提交的数据放置在是HTTP包的包体中。上文示例中
 
 因此，GET提交的数据会在地址栏中显示出来，而POST提交，地址栏不会改变
 
-####2、传输数据的大小
+#### 2、传输数据的大小
 首先声明：HTTP协议没有对传输的数据大小进行限制，HTTP协议规范也没有对URL长度进行限制。
 
 而在实际开发中存在的限制主要有：  
