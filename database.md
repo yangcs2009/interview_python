@@ -7,7 +7,7 @@
         * [事务的四个隔离级别](#事务的四个隔离级别)
         * [隔离级别的选择](#隔离级别的选择)
     * [2 数据库索引](#2-数据库索引)
-    * [3 Redis原理](#3-redis原理)
+    * [3 缓存那些事，兼论redis和memcached](#3-缓存那些事兼论redis和memcached)
     * [4 乐观锁和悲观锁](#4-乐观锁和悲观锁)
     * [5 MVCC](#5-mvcc)
     * [6 MyISAM和InnoDB](#6-myisam和innodb)
@@ -117,8 +117,9 @@ MYSQL支持4中隔离界别，默认的是`REPEATED READ`
 * 如果经常同时搜索两列或多列或按两列或多列排序时，索引也很有帮助。例如，如果经常在同一查询中为姓和名两列设置判据，
 那么在这两列上创建多列索引将很有意义。
 
-## 3 Redis原理
-[缓存那些事](https://tech.meituan.com/cache_about.html)
+## 3 缓存那些事，兼论redis和memcached
+[缓存那些事](https://tech.meituan.com/cache_about.html)  
+[memcached完全剖析系列](https://charlee.li/memcached-001.html)
 
 ## 4 乐观锁和悲观锁
 
