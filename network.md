@@ -650,7 +650,7 @@ TCP马上把拥塞窗口 cwnd 减小到1，并执行慢开始算法，同时把�
 网络吞吐量提高约20%。
 
 与快重传配合使用的还有快恢复算法，其过程有以下两个要点：  
- <1>. 当发送方连续收到三个重复确认，就执行“乘法减小”算法，把慢开始门限ssthresh减半。这是为了预防网络发生拥塞。请注意：
+<1>. 当发送方连续收到三个重复确认，就执行“乘法减小”算法，把慢开始门限ssthresh减半。这是为了预防网络发生拥塞。请注意：
  接下去不执行慢开始算法。  
 <2>. 由于发送方现在认为网络很可能没有发生拥塞，因此与慢开始不同之处是现在不执行慢开始算法（即拥塞窗口cwnd现在不设置为1），
 而是把cwnd值设置为慢开始门限ssthresh减半后的数值，然后开始执行拥塞避免算法（“加法增大”），使拥塞窗口缓慢地线性增大。
@@ -669,3 +669,66 @@ TCP马上把拥塞窗口 cwnd 减小到1，并执行慢开始算法，同时把�
 发送方窗口的上限值 = Min [ rwnd, cwnd ]  
 当rwnd < cwnd 时，是接收方的接收能力限制发送方窗口的最大值。  
 当cwnd < rwnd 时，则是网络的拥塞限制发送方窗口的最大值。  
+
+## 25 理解TCP backlog
+TCP建立连接是要进行三次握手，但是否完成三次握手后，服务器就处理（accept）呢？
+　　客户端connect()返回不代表TCP连接建立成功，有可能此时服务器accept queue已满,OS会直接丢弃后续ACK请求；
+　　客户端以为连接已建立，开始后续调用(譬如send)等待直至超时；
+服务器则等待ACK超时，会重传SYN k, ACK J+1给客户端(重传次数受限net.ipv4.tcp_synack_retries)；
+
+注：accept queue溢出，即便SYN queue没有溢出，新连接请求的SYN也可能被drop
+　　backlog其实是一个连接队列
+　　在linux 2.2以前，backlog大小包括了半连接状态和全连接状态两种队列大小。
+　　半连接状态为：服务器处于Listen状态时收到客户端SYN报文时放入半连接队列中，即SYN queue（服务器端口状态为：SYN_RCVD）。
+　　全连接状态为：TCP的连接状态从服务器（SYN+ACK）响应客户端后，到客户端的ACK报文到达服务器之前，则一直保留在半连接状态中；当服务器接收到客户端的ACK报文后，该条目将从半连接队列搬到全连接队列尾部，即 accept queue （服务器端口状态为：ESTABLISHED）。
+
+　　在Linux内核2.2之后，分离为两个backlog来分别限制半连接（SYN_RCVD状态）队列大小和全连接（ESTABLISHED状态 established）队列大小。
+　　SYN queue 队列长度由 /proc/sys/net/ipv4/tcp_max_syn_backlog 指定，默认为2048。
+　　Accept queue 队列长度由 /proc/sys/net/core/somaxconn 和使用listen函数时传入的参数，二者取最小值。默认为128。在Linux内核2.4.25之前，是写死在代码常量 SOMAXCONN ，在Linux内核2.4.25之后，在配置文件 /proc/sys/net/core/somaxconn 中直接修改，或者在 /etc/sysctl.conf 中配置 net.core.somaxconn = 128 。
+　　![tcp_backlog](img/network/tcp_backlog.jpeg)
+
+　　syn floods 攻击就是针对半连接队列的，攻击方不停地建连接，但是建连接的时候只做第一步，第二步中攻击方收到server的syn+ack后故意扔掉什么也不做，导致server上这个队列满其它正常请求无法进来
+
+在How TCP backlog works in linux一文中，作者给出了比较详细的分析：
+　　第一种实现 方式在底层维护一个由backlog指定大小的队列。服务端收到SYN后，返回一个SYN/ACK，并把连接放入队列中，此时这个连接的状态是SYN_RECEIVED。当客户端返回ACK后，此连接的状态变为ESTABLISHED。队列中只有ESTABLISHED状态的连接能够交由应用处理。第一种实现方式可以简单概括为：一个队列，两种状态。
+　　第二种实现 方式在底层维护一个SYN_RECEIVED队列和一个ESTABLISHED队列，当SYN_RECEIVED队列中的连接返回ACK后，将被移动到ESTABLISHED队列中。backlog指的是ESTABLISHED队列的大小。
+　　
+　　传统的基于BSD的tcp实现第一种方式，在linux2.2之前，内核也实现第一种方式。当队列满了以后，服务端再收到SYN时，将不会返回SYN/ACK。比较优雅的处理方法就是不处理这条连接，不返回RST，让客户端重试。
+　　在linux2.2后，选择第二种方式实现，SYN_RECEIVED队列的大小由proc/sys/net/ipv4/tcp_max_syn_backlog系统参数指定，ESTABLISHED队列由backlog和/proc/sys/net/core/somaxconn中较小的指定。
+　　但是在windows server中，底层选择winsock API实现，backlog的定义是represents the maximum length of the queue of pending connections for the listener(这是一个比较模糊的定义……来源于BSD)，当队列满了后，将会返回RST。
+
+　　考虑这样一种情况，当ESTABLISHED队列满了，此时收到一个连接的ACK，需要将此连接从SYN队列移到ESTABLISHED队列中，会发生什么？
+linux底层的关键代码是:
+
+listen_overflow:
+	if (!sysctl_tcp_abort_on_overflow) {
+		inet_rsk(req)->acked = 1;
+		return NULL;
+	}
+　　除非系统的tcp_abort_on_overflow指定为1（将返回RST），否则底层将不会做任何事情……这是一种委婉的退让策略，在服务端处理不过来时，让客户端误以为ACK丢失，继续重新发送ACK。这样，当服务端的处理能力恢复时，这条连接又可以重新被移动到ESTABLISHED队列中去。
+
+可以通过ss命令来显示
+
+[root@localhost ~]# ss -l
+State       Recv-Q Send-Q     Local Address:Port      Peer Address:Port     
+LISTEN      129    128        *:http                  *:*       
+LISTEN      0      128        :::ssh                  :::*       
+LISTEN      0      128        *:ssh                   *:*       
+LISTEN      0      100        ::1:smtp                :::*       
+LISTEN      0      100        127.0.0.1:smtp          *:*
+　　在LISTEN状态，其中 Send-Q 即为Accept queue的最大值，Recv-Q 则表示Accept queue中等待被服务器accept()。
+　　按照前面的理解，这个时候我们能看到有个端口上的服务全连接队列最大是128，但是现在有129个在队列中和等待进队列的，肯定有一个连接进不去队列要overflow掉
+
+　　另外客户端connect()返回不代表TCP连接建立成功，有可能此时accept queue 已满，系统会直接丢弃后续ACK请求；客户端误以为连接已建立，开始调用等待至超时；服务器则等待ACK超时，会重传SYN+ACK 给客户端，重传次数受限 net.ipv4.tcp_synack_retries ，默认为5，表示重发5次，每次等待30~40秒，即半连接默认时间大约为180秒，该参数可以在tcp被洪水攻击是临时启用这个参数。
+
+查看SYN queue 溢出
+　　比如下面看到的 667399 times ，表示全连接队列溢出的次数，隔几秒钟执行下，如果这个数字一直在增加的话肯定全连接队列偶尔满了。
+
+[root@localhost ~]# netstat -s | egrep "listen|LISTEN" 
+667399 times the listen queue of a socket overflowed
+667399 SYNs to LISTEN sockets ignored
+查看Accept queue 溢出
+
+[root@localhost ~]# netstat -s | grep TCPBacklogDrop
+TCPBacklogDrop: 2334
+
