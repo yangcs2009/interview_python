@@ -1,5 +1,6 @@
 
 <!-- vim-markdown-toc GFM -->
+
 * [网络](#网络)
     * [1 三次握手](#1-三次握手)
     * [2 四次挥手](#2-四次挥手)
@@ -10,6 +11,26 @@
     * [7 apache和nginx的区别](#7-apache和nginx的区别)
     * [8 网站用户密码保存](#8-网站用户密码保存)
     * [9 HTTP和HTTPS](#9-http和https)
+        * [HTTP简介](#http简介)
+        * [主要特点](#主要特点)
+        * [HTTP之URL](#http之url)
+        * [HTTP之请求消息Request](#http之请求消息request)
+            * [Get请求例子，使用Charles抓取的request：](#get请求例子使用charles抓取的request)
+            * [POST请求例子，使用Charles抓取的request：](#post请求例子使用charles抓取的request)
+        * [HTTP之响应消息Response](#http之响应消息response)
+        * [HTTP之状态码](#http之状态码)
+        * [HTTP请求方法](#http请求方法)
+        * [HTTP工作原理](#http工作原理)
+            * [1、客户端连接到Web服务器](#1客户端连接到web服务器)
+            * [2、发送HTTP请求](#2发送http请求)
+            * [3、服务器接受请求并返回HTTP响应](#3服务器接受请求并返回http响应)
+            * [4、释放连接TCP连接](#4释放连接tcp连接)
+            * [5、客户端浏览器解析HTML内容](#5客户端浏览器解析html内容)
+        * [GET和POST请求的区别](#get和post请求的区别)
+            * [1、数据显示](#1数据显示)
+            * [2、传输数据的大小](#2传输数据的大小)
+            * [3、安全性](#3安全性)
+            * [4、Http get,post,soap协议都是在http上运行的](#4http-getpostsoap协议都是在http上运行的)
     * [10 XSRF和XSS](#10-xsrf和xss)
     * [11 幂等 Idempotence](#11-幂等-idempotence)
     * [12 RESTful架构(SOAP,RPC)](#12-restful架构soaprpc)
@@ -29,6 +50,7 @@
     * [24 TCP流量控制和拥塞控制](#24-tcp流量控制和拥塞控制)
         * [TCP的流量控制](#tcp的流量控制)
         * [TCP的拥塞控制](#tcp的拥塞控制)
+    * [25 理解TCP backlog](#25-理解tcp-backlog)
 
 <!-- vim-markdown-toc -->
 # 网络
