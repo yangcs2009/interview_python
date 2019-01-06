@@ -193,7 +193,7 @@ Python将会这样运行:
 
 那么什么可以用来创建一个类呢？type，或者任何使用到type或者子类化type的东东都可以。
  
-###自定义元类
+### 自定义元类
 **元类的主要目的就是为了当创建类时能够自动地改变类.**  
 通常，你会为API做这样的事情，你希望可以创建符合当前上下文的类.  
 假想一个很傻的例子，你决定在你的模块里所有的类的属性都应该是大写形式。有好几种方法可以办到，
@@ -403,15 +403,15 @@ rather than from a class instance. Both a.class_foo(1) and A.class_foo(1) will b
 
 ## 4 类变量和实例变量
 
-###1)、类变量、实例变量概念
-类变量：
+### 1)、类变量、实例变量概念
+类变量：  
 类变量就是定义在类中，但是在函数体之外的变量。通常不使用self.变量名赋值的变量。类变量通常不作为类的实例变量的，类变量对于所有实例化的对象中是公用的。
-实例变量：
+实例变量：  
 实例变量是定义在方法中的变量，使用self绑定到实例上的变量，只是对当前实例起作用。
-###2)、访问
-类变量
+### 2)、访问
+类变量  
 在类的内部和外部类变量都可以直接使用className.类变量的形式访问。但是在类的内部，也可以使用self.类变量来访问，但这时含义就不同了(后面使用代码验证)。
-实例变量
+实例变量  
 在类的内部，实例变量self.实例变量的形式访问；在类的外部使用对象名.实例变量的形式访问。实例变量是绑定到一个实例上的变量，它只是属于这个绑定的实例。而类变量是所有的来自用一个类的实例所共享。我们看到这里会有这样的疑问，
 如果说类变量对所有来自这个类的所有实例所共享，那么假如我一个实例去改变了这个类变量(假设使用这样的操作object.类变量 = value)的值，那么对于其他的实例是不是都是可见的？
 答案是否定的，下面验证。
@@ -473,12 +473,12 @@ self.class_var= 40
 从上面运行的结果分析：当使用self.class_var形式访问类变量的之后，如果修改self.class_var的值，可以发现，类变量的值没有变化；我们修改类变量的值，发现self.class_var的值也没有受到影响。
 从最后打印obj2和obj3这两个都来自于一个类的实例中的类变量都是和修改后的类变量一样，表示他们是共享类变量的。
 
-###3）、总结
-1、类变量可以使用className.类变量和self.类变量两种方式访问。
-2、如果使用self.类变量的方式访问并重新赋值后，这个变量就会成为实例变量和self绑定，实际上就变成了一个实例变量，实例变量会屏蔽掉类变量的值。
-3、类变量是共享的，最好使用类名的方式来访问类变量。
-4、类变量通过sel访问时，就会被转化成实例变量，被绑定到特定的实例上。
-5、实例变量(self)的形式对类变量重新赋值后，类变量的值不会随之变化。
+### 3）、总结
+1、类变量可以使用className.类变量和self.类变量两种方式访问。  
+2、如果使用self.类变量的方式访问并重新赋值后，这个变量就会成为实例变量和self绑定，实际上就变成了一个实例变量，实例变量会屏蔽掉类变量的值。  
+3、类变量是共享的，最好使用类名的方式来访问类变量。  
+4、类变量通过sel访问时，就会被转化成实例变量，被绑定到特定的实例上。  
+5、实例变量(self)的形式对类变量重新赋值后，类变量的值不会随之变化。  
 
 参考:
 
@@ -680,7 +680,7 @@ http://stackoverflow.com/questions/3394835/args-and-kwargs
 
 那么对于情况 2 ，函数功能相同，但参数个数不同，python 如何处理？大家知道，答案就是缺省参数。对那些缺少的参数设定为缺省参数即可解决问题。因为你假设函数功能相同，那么那些缺少的参数终归是需要用的。
 
-好了，鉴于情况 1 跟 情况 2 都有了解决方案，python 自然就不需要函数重载了。
+好了，鉴于情况 1 跟 情况 2 都有了解决方案， **python自然就不需要函数重载**了。
 
 ## 14 新式类和旧式类
 
@@ -708,6 +708,229 @@ ps: `__metaclass__`是创建类时起作用.所以我们可以分别使用`__met
 ## 16 单例模式
 
 这个绝对常考啊.绝对要记住1~2个方法,当时面试官是让手写的.
+
+为什么？即为什么要使用这个设计模式，在使用这个模式之前存在什么样的问题？  
+是什么？通过Python语言来去实现这个设计模式，用于解决为什么中提到的问题。  
+怎么用？理解了为什么我们也就基本了解了什么情况下使用这个模式，不过在这里还是会细化使用场景，阐述模式的局限和优缺点。  
+
+**单例模式（Singleton Pattern）**是一种常用的软件设计模式，该模式的主要目的是确保某 **一个类只有一个实例存在**。当你希望在整个系统中，某个类只能出现一个实例时，单例对象就能派上用场。  
+### 为什么
+我们首先来看看单例模式的使用场景，然后再来分析为什么需要单例模式。  
+
+Python的logger就是一个单例模式，用以日志记录  
+Windows的资源管理器是一个单例模式  
+线程池，数据库连接池等资源池一般也用单例模式  
+网站计数器  
+
+从这些使用场景我们可以总结下什么情况下需要单例模式：  
+
+当每个实例都会占用资源，而且实例初始化会影响性能，这个时候就可以考虑使用单例模式，它给我们带来的好处是只有一个实例占用资源，并且只需初始化一次；  
+当有同步需要的时候，可以通过一个实例来进行同步控制，比如对某个共享文件（如日志文件）的控制，对计数器的同步控制等，这种情况下由于只有一个实例，所以不用担心同步问题。  
+
+当然所有使用单例模式的前提是我们的确用一个实例就可以搞定要解决的问题，而不需要多个实例，如果每个实例都需要维护自己的状态，这种情况下单例模式肯定是不适用的。  
+
+接下来看看如何使用Python来实现一个单例模式。
+### 是什么
+最开始的想法很简单，实现如下：
+
+```python
+class Singleton(object):
+    __instance = None
+    def __new__(cls, *args, **kwargs):  # 这里不能使用__init__，因为__init__是在instance已经生成以后才去调用的
+        if cls.__instance is None:
+            cls.__instance = super(Singleton, cls).__new__(cls, *args, **kwargs)
+        return cls.__instance
+
+s1 = Singleton()
+s2 = Singleton()
+print s1
+print s2
+```
+
+打印结果如下：
+
+```python
+<__main__.Singleton object at 0x7f3580dbe110>
+<__main__.Singleton object at 0x7f3580dbe110>
+```
+
+可以看出两次创建对象，结果返回的是同一个对象实例，我们再让我们的例子更接近真实的使用场景来看看
+
+```python
+class Singleton(object):
+    __instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super(
+                Singleton, cls).__new__(cls, *args, **kwargs)
+        return cls.__instance
+
+    def __init__(self, status_number):
+        self.status_number = status_number
+
+
+s1 = Singleton(2)
+s2 = Singleton(5)
+print s1
+print s2
+
+print s1.status_number
+print s2.status_number
+```
+
+这里我们使用了_init_方法，下面是打印结果，可以看出确实是只有一个实例，共享了实例的变量
+
+```python
+<__main__.Singleton object at 0x7f5116865490>
+<__main__.Singleton object at 0x7f5116865490>
+5
+5
+```
+
+不过这个例子中有一个问题我们没有解决，那就是多线程的问题，当有多个线程同时去初始化对象时，就很可能同时判断__instance is None，从而进入初始化instance的代码中。
+所以为了解决这个问题，我们必须通过同步锁来解决这个问题。以下例子来自xiaorui
+
+```python
+import threading
+try:
+    from synchronize import make_synchronized
+except ImportError:
+    def make_synchronized(func):
+        import threading
+        func.__lock__ = threading.Lock()
+
+        def synced_func(*args, **kws):
+            with func.__lock__:
+                return func(*args, **kws)
+
+        return synced_func
+
+
+class Singleton(object):
+    instance = None
+
+    @make_synchronized
+    def __new__(cls, *args, **kwargs):
+        if cls.instance is None:
+            cls.instance = object.__new__(cls, *args, **kwargs)
+        return cls.instance
+
+    def __init__(self):
+        self.blog = "xiaorui.cc"
+
+    def go(self):
+        pass
+
+
+def worker():
+    e = Singleton()
+    print id(e)
+    e.go()
+
+
+def test():
+    e1 = Singleton()
+    e2 = Singleton()
+    e1.blog = 123
+    print e1.blog
+    print e2.blog
+    print id(e1)
+    print id(e2)
+
+
+if __name__ == "__main__":
+    test()
+    task = []
+    for one in range(30):
+        t = threading.Thread(target=worker)
+        task.append(t)
+
+    for one in task:
+        one.start()
+
+    for one in task:
+        one.join()
+```
+
+至此我们的单例模式实现代码已经接近完美了，不过我们是否可以更简单地使用单例模式呢？答案是有的，接下来就看看如何更简单地使用单例模式。
+### 怎么用
+在Python的官方网站给了两个例子是用装饰符来修饰类，从而使得类变成了单例模式，使得我们可以通过更加简单的方式去实现单例模式  
+例子（这里只给出一个例子，因为更简单，另外一个大家可以看官网[Singleton](https://wiki.python.org/moin/PythonDecoratorLibrary#Singleton))
+
+```python
+def singleton(cls):
+    instance = cls()
+    instance.__call__ = lambda: instance
+    return instance
+
+#
+# Sample use
+#
+
+@singleton
+class Highlander:
+    x = 100
+    # Of course you can have any attributes or methods you like.
+
+Highlander() is Highlander() is Highlander #=> True
+id(Highlander()) == id(Highlander) #=> True
+Highlander().x == Highlander.x == 100 #=> True
+Highlander.x = 50
+Highlander().x == Highlander.x == 50 #=> True
+```
+
+这里简单解释下：  
+在定义class Highlander的时候已经执行完所有singleton装饰器中的代码，得到了一个instance，所以这之后所有对Highlander的调用实际上是在调用instance的_call_ 方法。  
+我们通过lambda函数定义了_call_方法让它始终返回instance，因此Highlander()和Highlander都返回instance  
+同时由于在类定义代码执行时就已经创建了instance，所以后续不论是多线程还是单线程，在调用Highlander时都是在调用instance的_call_方法，也就无需同步了。  
+最后我想说的是这种方法简直碉堡了～～～  
+附上我用于多线程的测试代码
+
+```python
+import threading
+
+def singleton(cls):
+    instance = cls()
+    instance.__call__ = lambda: instance
+    return instance
+
+
+@singleton
+class Highlander:
+    x = 100
+    # Of course you can have any attributes or methods you like.
+
+
+def worker():
+    hl = Highlander()
+    hl.x += 1
+    print hl
+    print hl.x
+
+
+def main():
+    threads = []
+    for _ in xrange(50):
+        t = threading.Thread(target=worker)
+        threads.append(t)
+
+    for t in threads:
+        t.start()
+
+    for t in threads:
+        t.join()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+这里的代码有一点小问题，就是在打印的时候有可能x属性已经被别的线程+1了，所以有可能导致同一个数打印多次，而有的数没有打印，但是不影响最终x属性的结果，
+所以当所有线程结束之后，属性x最终的值是可以保证正确的。
+
+[参考链接](https://www.jianshu.com/p/ec6589e02e2f)
+
 
 ### 1 使用`__new__`方法
 
@@ -1013,11 +1236,13 @@ Python中有一个被称为`Global Interpreter Lock`（GIL）的东西，它会�
 
 ## 33 with
 
-with 语句适用于对资源进行访问的场合，确保不管使用过程中是否发生异常都会执行必要的“清理”操作，释放资源，比如文件使用后自动关闭、线程中锁的自动获取和释放等。
+with 语句适用于对资源进行访问的场合，确保不管使用过程中是否发生异常都会 **执行必要的“清理”操作**，释放资源，比如文件使用后自动关闭、线程中锁的自动获取和释放等。  
+另外with真正强大之处是它可以 **处理异常**
 
 [理解python的with语句](http://linbo.github.io/2013/01/08/python-with)
 ## 34 装饰器
-装饰器是一个返回函数的高阶函数，用于在代码运行期间动态增加函数功能。
+装饰器是一个 **返回函数的高阶函数**，用于在代码运行期间动态增加函数功能。
+[参考](https://foofish.net/python-decorator.html)
 
 ```
 from functools import wraps
