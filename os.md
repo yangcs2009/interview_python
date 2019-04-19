@@ -1,5 +1,6 @@
 
 <!-- vim-markdown-toc GFM -->
+
 * [操作系统](#操作系统)
     * [1 select,poll和epoll](#1-selectpoll和epoll)
     * [2 调度算法](#2-调度算法)
@@ -15,8 +16,12 @@
         * [分页与分段的主要区别](#分页与分段的主要区别)
     * [8 页面置换算法](#8-页面置换算法)
     * [9 边沿触发和水平触发](#9-边沿触发和水平触发)
+    * [10 Free List](#10-free-list)
+        * [一、介绍](#一介绍)
+        * [二、C++实现](#二c实现)
 
 <!-- vim-markdown-toc -->
+
 # 操作系统
 
 ## 1 select,poll和epoll
@@ -140,3 +145,104 @@ Bulid过程可以分解为4个步骤:预处理(Prepressing), 编译(Compilation)
 ## 9 边沿触发和水平触发
 
 边缘触发是指每当状态变化时发生一个 io 事件，条件触发是只要满足条件就发生一个 io 事件
+
+## 10 Free List
+原题
+常常会有频繁申请、释放内存的需求，比如在发送网络报文时，每次都要分配内存以存储报文，等报文发送完成后又需要删除报文。
+
+为了避免频繁的new/delete对系统带来的开销，需要实现一个通用的FreeList机制。使用者总是从free list中分配内存，如果存在没有使用的内存块就直接摘出来使用，如果没有的话再从系统中分配。使用完毕后并不去直接delete该内存块，而是交给FreeList保管。
+
+要求：
+
+实现一个对固定大小内存块进行管理的通用FreeList类，给出定义和实现。要求不能使用STL中的容器类。定义类的接口和实现时注意通用性、健壮性和可测试性。
+如果该类的对象可能会被多个thread同时访问，请描述如何怎样保证线程安全。有没有办法在保证线程安全的同时尽可能增大并发度？如果有也请描述你的思路。
+
+
+### 一、介绍
+“可利用空间表” 是 **动态内存管理**的一种方法。通过把空闲内存划分成固定大小的数据块，而且利用指针字段把这些数据块链接起来，并使用一个指针指向首结点，这样就形成了一个单链表，即可利用空间表（free list）。
+
+当用户请求分配时，系统从可利用空间表中删除一个结点分配之；当用户释放其所占内存时，系统即回收并将它插入到可利用空间表中，因此，可利用空间表亦称为“存储池”。
+
+可利用空间表有三种结点结构：
+
+**结点大小相同**：把内存分为大小相同的若干块，将各块链接起来，分配时从头上摘取，用完后插入到头上，这实际是链式栈。
+
+**结点有若干规格**：当用户所需内存量不同，但只允许在几种规格间选取。这种情况下，可利用空间表中可以维护几条链表，同一链表中的结点大小相同。如大小为2、4、8字节，可以构造3个链表。
+
+**结点大小不等**：内存块大小不固定，只有一个链表。通常操作系统的可利用空间表属于此类。即可利用空间表中只有一个大小为整个存储区的结点。随着分配和回收的进行，可利用空间表的结点大小和个数也随之而变化。—— 由于结点的大小不同，在分配时并不是可利用空间表中的任一结点都能满足，而需要按照申请的长度在可利用空间表中进行检索，找到其长度大于等于申请长度的结点，从中截取合适的长度。这就涉及到分配策略：
+
+   **首次适配法**：从链表头指针开始查找，找到第一个大于等于所需空间的结点即分配。（分配时查询，释放时插入表头）
+
+   **最佳适配法**：要求结点从小到大排列，找到第一个大于等于所需空间的结点即分配。（分配和回收时都需要查询）
+
+   **最差适配法**：要求结点从大到小排列，总从第一个结点开始分配。（分配时不需查询，回收时查询）
+
+三种分配策略适合于不同的情况，首次适配法的优点是速度快，缺点是可能把较大块拆分成较小的块，导致后来对大块的申请难以满足 —— 这种分配策略适合于系统事先不掌握运行期间可能出现的请求分配和释放的信息的情况。最佳适配法的优点是使无法满足大请求块的可能性降到最低，但可能导致严重的外部碎片问题 —— 这种分配策略适合请求分配内存大小范围较广的系统。最差适配法的优点是使得空闲块长度趋于一致，适合于分配请求长度比较均匀的情况。
+
+
+
+### 二、C++实现
+根据题目要求，实现一个对固定大小内存块进行管理的通用FreeList类，即结点大小相同。其实这是最简单的一种实现，注意几个实现要点：
+
+一个静态成员指针static FreeList* freelist，用来指向可利用空间表。
+
+重载 new 和 delete。
+
+示例代码：
+```
+template <typename Elem>
+class FreeList
+{
+private:
+	static FreeList<Elem> *freelist;
+public:
+	Elem element;
+	FreeList *next;
+	FreeList(const Elem& elem, FreeList* next=NULL);
+	FreeList(FreeList* next=NULL);
+	void* operator new(size_t);    // 重载new
+	void operator delete(void*);   // 重载delete
+};
+
+
+template <typename Elem>
+FreeList<Elem>* FreeList<Elem>::freelist = NULL;
+
+template <typename Elem>
+FreeList<Elem>::FreeList(const Elem& elem, FreeList* next)
+{
+	this->element = elem;
+	this->next = next;
+}
+
+template <typename Elem>
+FreeList<Elem>::FreeList(FreeList* next)
+{
+	this->next = next;
+}
+
+template <typename Elem>
+void* FreeList<Elem>::operator new(size_t)
+{
+	/*freelist没有可用空间，就从系统分配*/
+	if(freelist == NULL)  
+		return ::new FreeList;
+
+	/*否则，从freelist表头摘取结点*/
+	FreeList<Elem>* temp = freelist;
+	freelist = freelist->next;
+	return temp;
+}
+
+template <typename Elem>
+void FreeList<Elem>::operator delete(void* ptr)
+{
+	/*把要释放的结点空间加入到freelist中*/
+	((FreeList<Elem>*)ptr)->next = freelist;
+	freelist = (FreeList<Elem>*)ptr;
+}
+```
+
+至于线程安全的问题，在多线程的环境下，线程同步的方式有多种： **临界区、事件、互斥量、信号量**。比如，我们可以把访问该类对象的代码段设置为 Critical Section，
+这样同一时间就只有一个线程可以执行这段代码。为了尽可能增大并发度，更好的方式是将代码改造成对临界数据的保护而不是对临界代码的保护，这样就可以令不会同时访问相同临界数据
+的线程完全并行地执行。

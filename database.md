@@ -1,5 +1,6 @@
 
 <!-- vim-markdown-toc GFM -->
+
 * [数据库](#数据库)
     * [1 事务](#1-事务)
         * [事务的四个特性](#事务的四个特性)
@@ -8,12 +9,18 @@
         * [隔离级别的选择](#隔离级别的选择)
     * [2 数据库索引](#2-数据库索引)
     * [3 缓存那些事，兼论redis和memcached](#3-缓存那些事兼论redis和memcached)
+        * [memcached](#memcached)
+        * [Redis](#redis)
+            * [Redis数据模型图](#redis数据模型图)
+            * [6种的数据淘汰策略](#6种的数据淘汰策略)
+            * [应用场景](#应用场景)
     * [4 乐观锁和悲观锁](#4-乐观锁和悲观锁)
     * [5 MVCC](#5-mvcc)
     * [6 MyISAM和InnoDB](#6-myisam和innodb)
     * [7 范式](#7-范式)
 
 <!-- vim-markdown-toc -->
+
 # 数据库
 
 ## 1 事务
@@ -121,6 +128,71 @@ MYSQL支持4中隔离界别，默认的是`REPEATED READ`
 [缓存那些事](https://tech.meituan.com/cache_about.html)  
 [memcached完全剖析系列](https://charlee.li/memcached-001.html)
 
+### memcached
+memcached本身不提供分布式解决方案。在服务端，memcached集群环境实际就是一个个memcached服务器的堆积，环境搭建较为简单；cache的分布式主要是在客户端
+实现，通过客户端的路由处理来达到分布式解决方案的目的。
+![memcached客户端路由图](img/database/memcache路由图.png)
+
+![memcached一致性hash](img/database/memcache一致性hash.png)
+memcached客户端采用一致性hash算法作为路由策略
+
+memcached的内存管理机制
+![memcached内存结构图](img/database/memcache内存结构图.png)
+**slab**是一个内存块，它是memcached一次申请内存的 **最小单位**。在启动memcached的时候一般会使用参数-m指定其可用内存，但是并不是在启动的那一刻所有的
+内存就全部分配出去了，只有在需要的时候才会去申请，而且每次申请一定是一个slab。Slab的大小固定为 **1M**（1048576 Byte），一个slab由若干个大小相等的
+**chunk**组成。每个chunk中都保存了一个item结构体、一对key和value。  
+虽然在同一个slab中chunk的大小相等的，但是在不同的slab中chunk的大小并不一定相等，在memcached中按照chunk的大小不同，可以把slab分为很多
+种类（class），默认情况下memcached把slab分为41类（class1～class40），在class 1中，chunk的大小为80字节，由于一个slab的大小是固定的
+1048576字节（1M），因此在class1中最多可以有13107个chunk（也就是这个slab能存最多13107个小于80字节的key-value数据）。
+memcached内存管理采取 **预分配、分组管理**的方式，分组管理就是我们上面提到的slab class，按照chunk的大小slab被分为很多种类。内存预分配过程是怎样的呢？
+向memcached添加一个item时候，memcached首先会根据item的大小，来选择最合适的slab class：例如item的大小为190字节，默认情况下class 4的chunk
+大小为160字节显然不合适，class 5的chunk大小为200字节，大于190字节，因此该item将放在class 5中（显然这里会有10字节的浪费是不可避免的），
+计算好所要放入的chunk之后，memcached会去检查该类大小的chunk还有没有空闲的，如果没有，将会申请1M（1个slab）的空间并划分为该种类chunk。
+例如我们第一次向memcached中放入一个190字节的item时，memcached会产生一个slab class 2（也叫一个page），并会用去一个chunk，剩余5241个
+chunk供下次有适合大小item时使用，当我们用完这所有的5242个chunk之后，下次再有一个在160～200字节之间的item添加进来时，memcached会再次产生
+一个class 5的slab（这样就存在了2个pages）。  
+
+**总结**来看，memcached内存管理需要注意的几个方面：  
+* chunk是在page里面划分的，而page固定为1m，所以chunk最大不能超过1m。  
+* chunk实际占用内存要加48B，因为chunk数据结构本身需要占用48B。  
+* 如果用户数据大于1m，则memcached会将其切割，放到多个chunk内。  
+* 已分配出去的page不能回收。  
+* 数据没有持久化，集群故障重启数据无法恢复  
+对于key-value信息，最好不要超过1m的大小；同时信息长度最好相对是比较均衡稳定的，这样能够保障最大限度的使用内存；同时，memcached采用的LRU清理策略，合理甚至过期时间，提高命中率。
+
+### Redis
+[redis设计与实现笔记](https://blog.csdn.net/yangcs2009/article/details/50637165)
+#### Redis数据模型图
+![Redis数据模型图](img/database/Redis数据模型图.png)
+字符串可以被编码为raw（一般字符串）或Rint（为了节约内存，Redis会将字符串表示的64位有符号整数编码为整数来进行储存）；  
+列表可以被编码为ziplist或linkedlist，ziplist是为节约大小较小的列表空间而作的特殊表示；  
+集合可以被编码为intset或者hashtable，intset是只储存数字的小集合的特殊表示；  
+hash表可以编码为zipmap或者hashtable，zipmap是小hash表的特殊表示；  
+有序集合可以被编码为ziplist或者skiplist格式，ziplist用于表示小的有序集合，而skiplist则用于表示任何大小的有序集合。  
+
+#### 6种的数据淘汰策略
+1. volatile-lru：从已设置过期时间的数据集（server.db[i].expires）中挑选最近最少使用的数据淘汰；
+2. volatile-ttl：从已设置过期时间的数据集（server.db[i].expires）中挑选将要过期的数据淘汰；
+3. volatile-random：从已设置过期时间的数据集（server.db[i].expires）中任意选择数据淘汰 ；
+4. allkeys-lru：从数据集（server.db[i].dict）中挑选最近最少使用的数据淘汰；
+5. allkeys-random：从数据集（server.db[i].dict）中任意选择数据淘汰；
+6. no-enviction（驱逐）：禁止驱逐数据。
+
+#### 应用场景
+* 在主页中显示最新的项目列表：Redis使用的是常驻内存的缓存，速度非常快。LPUSH用来插入一个内容ID，作为关键字存储在列表头部。LTRIM用来限制列表中
+的项目数最多为5000。如果用户需要的检索的数据量超越这个缓存容量，这时才需要把请求发送到数据库。  
+* 删除和过滤：如果一篇文章被删除，可以使用LREM从缓存中彻底清除掉。  
+* 排行榜及相关问题：排行榜（leader board）按照得分进行排序。ZADD命令可以直接实现这个功能，而ZREVRANGE命令可以用来按照得分来获取前100名的用户，
+ZRANK可以用来获取用户排名，非常直接而且操作容易。  
+* 按照用户投票和时间排序：排行榜，得分会随着时间变化。LPUSH和LTRIM命令结合运用，把文章添加到一个列表中。一项后台任务用来获取列表，并重新计算列表的排序，
+ZADD命令用来按照新的顺序填充生成列表。列表可以实现非常快速的检索，即使是负载很重的站点。  
+* 过期项目处理：使用Unix时间作为关键字，用来保持列表能够按时间排序。对current_time和time_to_live进行检索，完成查找过期项目的艰巨任务。
+另一项后台任务使用ZRANGE…WITHSCORES进行查询，删除过期的条目。  
+* 计数：进行各种数据统计的用途是非常广泛的，比如想知道什么时候封锁一个IP地址。INCRBY命令让这些变得很容易，通过原子递增保持计数；GETSET用来重置计数器；
+过期属性用来确认一个关键字什么时候应该删除。  
+* 特定时间内的特定项目：这是特定访问者的问题，可以通过给每次页面浏览使用SADD命令来解决。SADD不会将已经存在的成员添加到一个集合。
+* Pub/Sub：在更新中保持用户对数据的映射是系统中的一个普遍任务。Redis的pub/sub功能使用了SUBSCRIBE、UNSUBSCRIBE和PUBLISH命令，让这个变得更加容易。
+* 队列：在当前的编程中队列随处可见。除了push和pop类型的命令之外，Redis还有阻塞队列的命令，能够让一个程序在执行时被另一个程序添加到队列。
 ## 4 乐观锁和悲观锁
 
 悲观锁：假定会发生并发冲突，屏蔽一切可能违反数据完整性的操作
