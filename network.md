@@ -2,6 +2,9 @@
 <!-- vim-markdown-toc GFM -->
 
 * [网络](#网络)
+    * [1 5中网络I/O模型](#1-5中网络io模型)
+        * [blocking和non-blocking的区别，synchronous IO和asynchronous IO的区别](#blocking和non-blocking的区别synchronous-io和asynchronous-io的区别)
+    * [1 select,poll和epoll](#1-selectpoll和epoll)
     * [1 三次握手](#1-三次握手)
     * [2 四次挥手](#2-四次挥手)
     * [3 ARP协议](#3-arp协议)
@@ -54,6 +57,59 @@
 
 <!-- vim-markdown-toc -->
 # 网络
+
+## 1 5中网络I/O模型
+
+[5种网络IO模型](https://blog.csdn.net/xiexievv/article/details/44976215)  
+
+![io模型对比](img/network/io模型对比.png)
+
+对于一个network IO (这里我们以read举例)，它会涉及到两个系统对象，一个是调用这个IO的process (or thread)，另一个就是系统内核(kernel)。当一个read操作发生时，它会经历两个阶段：  
+    1）等待数据准备 (Waiting for the data to be ready)  
+    2）将数据从内核拷贝到进程中(Copying the data from the kernel to the process)  
+记住这两点很重要，因为这些IO模型的区别就是在两个阶段上各有不同的情况。
+
+### blocking和non-blocking的区别，synchronous IO和asynchronous IO的区别
+**blocking与non-blocking**  
+调用blocking IO会一直block住对应的进程直到操作完成，而non-blocking IO在kernel还在准备数据的情况下会立刻返回。  
+**synchronous IO和asynchronous IO**  
+在说明synchronous IO和asynchronous IO的区别之前，需要先给出两者的定义。Stevens给出的定义（其实是POSIX的定义）是这样子的：  
+    * A synchronous I/O operation causes the requesting process to be blocked until that I/O operation completes;  
+    * An asynchronous I/O operation does not cause the requesting process to be blocked;  
+两者的区别就在于synchronous IO做”IO operation”的时候会将process阻塞。按照这个定义，之前所述的blocking IO，non-blocking IO，IO multiplexing
+都属于synchronous IO。有人可能会说，non-blocking IO并没有被block啊。这里有个非常“狡猾”的地方，定义中所指的”IO operation”是指真实的IO操作，
+就是例子中的recvfrom这个系统调用。non-blocking IO在执行recvfrom这个系统调用的时候，如果kernel的数据没有准备好，这时候不会block进程。
+但是当kernel中数据准备好的时候，recvfrom会将数据从kernel拷贝到用户内存中，这个时候进程是被block了，在这段时间内进程是被block的。
+而asynchronous IO则不一样，当进程发起IO操作之后，就直接返回再也不理睬了，直到kernel发送一个信号，告诉进程说IO完成。在这整个过程中，进程完全没有被block。
+
+## 1 select,poll和epoll
+
+select，poll，epoll都是IO多路复用的机制。I/O多路复用就通过一种机制，可以监视多个描述符，一旦某个描述符就绪（一般是读就绪或者写就绪），
+能够通知程序进行相应的读写操作。但select，poll，epoll本质上都是 **同步I/O**，因为他们都需要在读写事件就绪后自己负责进行读写，也就是说这个读写过程
+是阻塞的，而异步I/O则无需自己负责进行读写，异步I/O的实现会负责把数据从内核拷贝到用户空间。
+
+[selec,poll和epoll区别总结](http://www.cnblogs.com/Anker/p/3265058.html)
+
+基本上select有3个缺点:
+
+1. 连接数受限，默认1024，epoll无限制，可查看`/proc/sys/fs/file-max`
+2. 查找配对速度慢
+3. 数据由内核拷贝到用户态
+
+poll改善了第一个缺点
+
+epoll改了三个缺点.
+
+[关于epoll的介绍](http://www.cnblogs.com/my_life/articles/3968782.html)
+
+**总结**：  
+
+（1）select，poll实现需要自己不断轮询 **所有fd集合**，直到设备就绪，期间可能要睡眠和唤醒多次交替。而epoll其实也需要调用epoll_wait不断轮询就绪链表，
+期间也可能多次睡眠和唤醒交替，但是它是设备就绪时，调用回调函数，把就绪fd放入就绪链表中，并唤醒在epoll_wait中进入睡眠的进程。虽然都要睡眠和交替，
+但是select和poll在“醒着”的时候要遍历整个fd集合，而epoll在“醒着”的时候只要判断一下就绪链表是否为空就行了，这节省了大量的CPU时间。这就是回调机制带来的性能提升。
+
+（2）select，poll每次调用都要把fd集合从用户态往内核态拷贝一次，并且要把current往设备等待队列中挂一次，而epoll只要一次拷贝，而且把current往等待队列上
+挂也只挂一次（在epoll_wait的开始，注意这里的等待队列并不是设备等待队列，只是一个epoll内部定义的等待队列）。这也能节省不少的开销。
 
 ## 1 三次握手
 
