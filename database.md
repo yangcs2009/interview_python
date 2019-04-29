@@ -163,11 +163,11 @@ chunk供下次有适合大小item时使用，当我们用完这所有的5242个c
 ### Redis
 [redis设计与实现笔记](https://blog.csdn.net/yangcs2009/article/details/50637165)
 #### Redis数据模型图
-![Redis数据模型图](img/database/Redis数据模型图.png)
-字符串可以被编码为raw（一般字符串）或Rint（为了节约内存，Redis会将字符串表示的64位有符号整数编码为整数来进行储存）；  
+![Redis数据模型图](img/database/encoding.png)  
+字符串可以被编码为embstr(小于39字节）、raw（一般字符串）或int（为了节约内存，Redis会将字符串表示的64位有符号整数编码为整数来进行储存）；  
 列表可以被编码为ziplist或linkedlist，ziplist是为节约大小较小的列表空间而作的特殊表示；  
 集合可以被编码为intset或者hashtable，intset是只储存数字的小集合的特殊表示；  
-hash表可以编码为zipmap或者hashtable，zipmap是小hash表的特殊表示；  
+hash表可以编码为ziplist或者hashtable，zipmap是小hash表的特殊表示；  
 有序集合可以被编码为ziplist或者skiplist格式，ziplist用于表示小的有序集合，而skiplist则用于表示任何大小的有序集合。  
 
 #### 6种的数据淘汰策略
