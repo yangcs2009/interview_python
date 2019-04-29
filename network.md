@@ -61,6 +61,7 @@
 ## 1 5中网络I/O模型
 
 [5种网络IO模型](https://blog.csdn.net/xiexievv/article/details/44976215)  
+[聊聊Linux 五种IO模型](https://www.jianshu.com/p/486b0965c296)
 
 ![io模型对比](img/network/io模型对比.png)
 
