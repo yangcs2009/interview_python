@@ -18,13 +18,20 @@
     * [7 Python中单下划线和双下划线](#7-python中单下划线和双下划线)
     * [8 字符串格式化:%和.format](#8-字符串格式化和format)
     * [9 迭代器和生成器](#9-迭代器和生成器)
+        * [概念](#概念)
+            * [迭代器(iterator)](#迭代器iterator)
+            * [生成器](#生成器)
+        * [生成器的两种生成方式](#生成器的两种生成方式)
     * [10 `*args` and `**kwargs`](#10-args-and-kwargs)
-    * [11 面向切面编程AOP和装饰器](#11-面向切面编程aop和装饰器)
+    * [11 面向切面编程AOP(Aspect Oriented Program)和装饰器](#11-面向切面编程aopaspect-oriented-program和装饰器)
     * [12 鸭子类型](#12-鸭子类型)
     * [13 Python中重载](#13-python中重载)
     * [14 新式类和旧式类](#14-新式类和旧式类)
     * [15 `__new__`和`__init__`的区别](#15-__new__和__init__的区别)
     * [16 单例模式](#16-单例模式)
+        * [为什么](#为什么)
+        * [是什么](#是什么)
+        * [怎么用](#怎么用)
         * [1 使用`__new__`方法](#1-使用__new__方法)
         * [2 共享属性](#2-共享属性)
         * [3 装饰器版本](#3-装饰器版本)
@@ -49,8 +56,13 @@
     * [31 到底什么是Python？你可以在回答中与其他技术进行对比（也鼓励这样做）](#31-到底什么是python你可以在回答中与其他技术进行对比也鼓励这样做)
     * [32 Python和多线程（multi-threading）。这是个好主意码？列举一些让Python代码以并行方式运行的方法](#32-python和多线程multi-threading这是个好主意码列举一些让python代码以并行方式运行的方法)
     * [33 with](#33-with)
-    * [34 装饰器](#34-装饰器)
     * [35 `if __name__ == "__main__":`是干嘛的?](#35-if-__name__--__main__是干嘛的)
+    * [36 import时发生的那些事](#36-import时发生的那些事)
+        * [模块module](#模块module)
+            * [import module (包括import module as xxx)](#import-module-包括import-module-as-xxx)
+            * [from module import symbol (包括from module import *, from module import symbol as xxx )](#from-module-import-symbol-包括from-module-import--from-module-import-symbol-as-xxx-)
+        * [包package](#包package)
+            * [总结](#总结)
 
 <!-- vim-markdown-toc -->
 # Python语言特性
@@ -558,8 +570,21 @@ http://stackoverflow.com/questions/5082452/python-string-formatting-vs-format
 
 这是中文版: http://taizilongxu.gitbooks.io/stackoverflow-about-python/content/1/README.html
 
-生成器的两种生成方式
-要创建一个generator，有很多种方法。第一种方法很简单，只要把一个列表生成式的[]改成()，就创建了一个generator：
+### 概念
+
+[完全理解Python迭代对象、迭代器、生成器](https://foofish.net/iterators-vs-generators.html)
+
+![relationships](img/python/relationships.png)
+
+#### 迭代器(iterator)
+那么什么迭代器呢？它是一个带状态的对象，它能在你调用next()方法的时候返回容器中的下一个值，任何实现了 **__iter__和__next__()**
+（python2中实现next()）方法的对象都是迭代器，__iter__返回迭代器自身，__next__返回容器中的下一个值，如果容器中没有更多元素了，
+则抛出StopIteration异常，至于它们到底是如何实现的这并不重要。  
+#### 生成器
+在Python中，这种一边循环一边计算的机制（就不必创建完整的list，从而节省大量的空间），称为 **生成器（Generator）**，生成器其实是一种特殊的迭代器。
+
+### 生成器的两种生成方式  
+要创建一个generator，有很多种方法。第一种方法很简单，只要把一个列表生成式的[]改成 **()**，就创建了一个generator：
 
 ```python
 >>> L = [x * x for x in range(10)]
@@ -642,16 +667,17 @@ a = aardvark, b = baboon, c = cat
 
 http://stackoverflow.com/questions/3394835/args-and-kwargs
 
-## 11 面向切面编程AOP和装饰器
+## 11 面向切面编程AOP(Aspect Oriented Program)和装饰器
+[理解 Python 装饰器](https://foofish.net/python-decorator.html)
 
-详见34  
-这个AOP一听起来有点懵,同学面阿里的时候就被问懵了...
+在运行时，动态地将代码切入到类的指定方法、指定位置上的编程思想就是 **面向切面的编程**。   
+一般而言，我们管切入到指定类指定方法的代码片段称为切面，而切入到哪些类、哪些方法则叫切入点。有了AOP，我们就可以把几个类共有的代码，
+抽取到一个切片中，等到需要时再切入对象中去，从而改变其原有的行为。
 
-装饰器是一个很著名的设计模式，经常被用于有切面需求的场景，较为经典的有插入日志、性能测试、事务处理等。装饰器是解决这类问题的绝佳设计，有了装饰器，我们就可以抽离出大量函数中与函数功能本身无关的雷同代码并继续重用。概括的讲，**装饰器的作用就是为已经存在的对象添加额外的功能。**
-
-这个问题比较大,推荐: http://stackoverflow.com/questions/739654/how-can-i-make-a-chain-of-function-decorators-in-python
-
-中文: http://taizilongxu.gitbooks.io/stackoverflow-about-python/content/3/README.html
+**装饰器**本质上是一个Python函数或类，它可以让其他函数或类在不需要做任何代码修改的前提下增加额外功能，装饰器的返回值也是一个函数/类对象。（ **装饰器是
+一个返回函数的高阶函数，用于在代码运行期间动态增加函数功能。**）  
+它经常用于有切面需求的场景，比如：插入日志、性能测试、事务处理、缓存、权限校验等场景，装饰器是解决这类问题的绝佳设计。有了装饰器，
+我们就可以抽离出大量与函数功能本身无关的雷同代码到装饰器中并继续重用。概括的讲，装饰器的作用就是为已经存在的对象添加额外的功能。
 
 ## 12 鸭子类型
 
@@ -1142,8 +1168,9 @@ Python默认定义了三代对象集合，索引数越大，对象存活时间�
 当某些内存块M经过了3次垃圾收集的清洗之后还存活时，我们就将内存块M划到一个集合A中去，而新分配的内存都划分到集合B中去。当垃圾收集开始工作时，大多数情况都只对集合B进行垃圾回收，而对集合A进行垃圾回收要隔相当长一段时间后才进行，这就使得垃圾收集机制需要处理的内存少了，效率自然就提高了。在这个过程中，集合B中的某些内存块由于存活时间长而会被转移到集合A中，当然，集合A中实际上也存在一些垃圾，这些垃圾的回收会因为这种分代的机制而被延迟。
 
 ## 25 Python的List
+list_resize
 
-推荐: http://www.jianshu.com/p/J4U6rR
+[Python中list的实现](http://www.jianshu.com/p/J4U6rR)
 
 ## 26 Python的is
 
@@ -1240,31 +1267,6 @@ with 语句适用于对资源进行访问的场合，确保不管使用过程中
 另外with真正强大之处是它可以 **处理异常**
 
 [理解python的with语句](http://linbo.github.io/2013/01/08/python-with)
-## 34 装饰器
-装饰器是一个 **返回函数的高阶函数**，用于在代码运行期间动态增加函数功能。
-[参考](https://foofish.net/python-decorator.html)
-
-```
-from functools import wraps
-def memc(func):
-    cache = {}
-    miss = object()
-    @wraps(func)
-    def wrapper(*args):
-        result = cache.get(args, miss)
-        if result is miss:
-            result = func(*args)
-            cache[args] = result
-        return result
-    return wrapper
-@memc
-def fib(n):
-    if n < 2:
-        return n
-    return fib(n-1) + fib(n-2)
-print fib(4)
-```
-
 
 ## 35 `if __name__ == "__main__":`是干嘛的?
 
@@ -1294,3 +1296,43 @@ python threading_example.py
 **这么做的原因是有时你需要你写的模块既可以直接的执行,还可以被当做模块导入到其他模块中去.通过检查是不是主函数,可以让你的代码只在它作为主程序运行时执行,而当其他人调用你的模块中的函数的时候不必执行.**  
 如果想了解更多,请查看[这个](http://ibiblio.org/g2swap/byteofpython/read/module-name.html)
 
+## 36 import时发生的那些事
+
+[模块&包---import时发生的那些事](https://zhuanlan.zhihu.com/p/30836117)  
+[导入（import）](https://blog.csdn.net/weixin_38256474/article/details/81228492)
+
+### 模块module
+#### import module (包括import module as xxx)
+
+![import](img/python/import.png)
+
+首次使用import加载模块时，它将做3件事：
+
+1. 创建新的命名空间，用作在相应源文件中定义的所有对象的容器。在模块重定义的函数和方法在使用global语句时将访问该命名空间。
+2. 在新创建的命名空间中执行模块中包含的代码。
+3. 在调用函数中创建名称来引用模块命名空间。这个名称与模块的名称相匹配。
+
+#### from module import symbol (包括from module import *, from module import symbol as xxx )
+
+![from_module_import.png](img/python/from_module_import.png)
+
+from语句用于将模块中的具体定义加载到当前命名空间中。from语句相当于import，但它 **不会创建**一个名称来引用新创建的模块命名空间，
+而是将对模块中定义的一个或多个对象的引用放到当前命名空间中
+
+### 包package
+只要第一次导入包中的任何部分，就会执行文件__init__.py中的代码。
+
+单独导入包名(import package)不会导入包中所包含的所有子模块。
+
+* 当包的__init__.py文件为空时，导入包名没法使用包内的子包及模块
+* 包的__init__.py并不为空，会执行包的__init__.py文件
+
+#### 总结
+* 第一次导入一个模块，会执行这个模块
+* 可以通过修改模块module的__all__列表，来改变from module import * 时的效果
+* 导入一个包，其实就是导入包的__init__.py模块
+* 如果包的__init__.py模块为空，那么import package这样的语句是不能使用包当中的任何模块的
+* 如果包的__init__.py模块为空，那我们只能使用import package.module或者from package import module这样的导入方式
+* __init__.py也是个模块，其实也可以在__init__.py中直接定义函数fun，那样import package就可以直接用package.fun这个函数了是吧。但是我们一般不会这么干，这样会使__init__.py文件太乱
+* __init__.py也是个模块，那也可以在这个模块中导入其他模块，这样import package时，就能直接使用一些符号了。
+* __init__.py也是个模块，也可以定义__all__列表变量，控制from package import * 的作用。
