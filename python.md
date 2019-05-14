@@ -37,7 +37,7 @@
         * [3 装饰器版本](#3-装饰器版本)
         * [4 import方法](#4-import方法)
     * [17 Python中的作用域](#17-python中的作用域)
-    * [18 GIL线程全局锁](#18-gil线程全局锁)
+    * [18 GIL 全局解释器锁](#18-gil-全局解释器锁)
     * [19 协程](#19-协程)
     * [20 闭包](#20-闭包)
     * [21 lambda函数](#21-lambda函数)
@@ -63,6 +63,8 @@
             * [from module import symbol (包括from module import *, from module import symbol as xxx )](#from-module-import-symbol-包括from-module-import--from-module-import-symbol-as-xxx-)
         * [包package](#包package)
             * [总结](#总结)
+    * [37 wsgi](#37-wsgi)
+            * [什么是WSGI](#什么是wsgi)
 
 <!-- vim-markdown-toc -->
 # Python语言特性
@@ -1034,22 +1036,29 @@ Python 中，一个变量的作用域总是由在代码中被赋值的地方所�
 
 本地作用域（Local）→当前作用域被嵌入的本地作用域（Enclosing locals）→全局/模块作用域（Global）→内置作用域（Built-in）
 
-## 18 GIL线程全局锁
+## 18 GIL 全局解释器锁
 
-线程全局锁(Global Interpreter Lock),即Python为了保证线程安全而采取的独立线程运行的限制,说白了就是一个核只能在同一时间运行一个线程.
+[Python的GIL是什么鬼](http://cenalulu.github.io/python/gil-in-python/)
 
-见[Python 最难的问题](http://www.oschina.net/translate/pythons-hardest-problem)
+全局解释器锁(Global Interpreter Lock),即Python为了保证线程安全而采取的独立线程运行的限制,说白了就是一个核只能在同一时间运行一个线程.
+
+GIL并不是Python的特性，它是在实现Python解析器(CPython)时所引入的一个概念，Python完全可以不依赖于GIL。
 
 解决办法就是多进程和下面的协程(协程也只是单CPU,但是能减小切换代价提升性能).
 
 ## 19 协程
 
-知乎被问到了,呵呵哒,跪了
+[协程](https://www.liaoxuefeng.com/wiki/897692888725344/923057403198272)
 
-简单点说协程是进程和线程的升级版,进程和线程都面临着内核态和用户态的切换问题而耗费许多切换时间,而协程就是用户自己控制切换的时机,不再需要陷入系统的内核态.
+协程是为非抢占式多任务产生子程序的计算机程序组件，协程允许不同入口点在不同位置暂停或开始执行程序。简单点说协程是进程和线程的升级版，进程和线程都面临着内核态和用户态的切换问题而耗费许多切换时间,而协程就是用户自己控制切换的时机,不再需要陷入系统的内核态.
 
-Python里最常见的yield就是协程的思想!可以查看第九个问题.
+协程的特点在于是一个线程执行，那和多线程比，协程有何优势？
+   
+* 最大的优势就是协程极高的 **执行效率**。因为子程序切换不是线程切换，而是由程序自身控制，因此，没有线程切换的开销，和多线程比，线程数量越多，协程的性能优势就越明显。
 
+* 第二大优势就是不需要多线程的 **锁机制**，因为只有一个线程，也不存在同时写变量冲突，在协程中控制共享资源不加锁，只需要判断状态就好了，所以执行效率比多线程高很多。
+
+因为协程是一个线程执行，那怎么利用多核CPU呢？最简单的方法是 **多进程+协程**，既充分利用多核，又充分发挥协程的高效率，可获得极高的性能。
 
 ## 20 闭包
 
@@ -1136,11 +1145,20 @@ d =  [1, 2, 3, 4, ['a', 'b']]
 
 ## 24 Python垃圾回收机制
 
-[详细资料](http://www.jianshu.com/p/1e375fb40506)
+[Python垃圾回收机制](http://www.jianshu.com/p/1e375fb40506)
 
 Python GC主要使用引用计数（reference counting）来跟踪和回收垃圾。在引用计数的基础上，通过“标记-清除”（mark and sweep）解决容器对象可能产生的循环引用问题，通过“分代回收”（generation collection）以空间换时间的方法提高垃圾回收效率。
 
 ### 1 引用计数
+
+```
+PyObject
+
+ typedef struct_object {
+ int ob_refcnt;
+ struct_typeobject *ob_type;
+} PyObject;
+```
 
 PyObject是每个对象必有的内容，其中`ob_refcnt`就是做为引用计数。当一个对象有新的引用时，它的`ob_refcnt`就会增加，当引用它的对象被删除，它的`ob_refcnt`就会减少.引用计数为0时，该对象生命就结束了。
 
@@ -1148,6 +1166,8 @@ PyObject是每个对象必有的内容，其中`ob_refcnt`就是做为引用计�
 
 1. 简单
 2. 实时性
+    * 一旦没有引用，内存就直接释放；
+    * 处理回收内存的时间分摊到了平时；
 
 缺点:
 
@@ -1336,3 +1356,26 @@ from语句用于将模块中的具体定义加载到当前命名空间中。from
 * __init__.py也是个模块，其实也可以在__init__.py中直接定义函数fun，那样import package就可以直接用package.fun这个函数了是吧。但是我们一般不会这么干，这样会使__init__.py文件太乱
 * __init__.py也是个模块，那也可以在这个模块中导入其他模块，这样import package时，就能直接使用一些符号了。
 * __init__.py也是个模块，也可以定义__all__列表变量，控制from package import * 的作用。
+
+## 37 wsgi
+
+#### 什么是WSGI
+首先介绍几个关于WSGI相关的概念  
+**WSGI**：全称是`Web Server Gateway Interface`，WSGI不是服务器，python模块，框架，API或者任何软件，只是一种 **规范**，描述web server如何
+与web application通信的规范。server和application的规范在PEP 3333中有具体描述。要实现WSGI协议，必须同时实现web server和web application，
+当前运行在WSGI协议之上的web框架有`Torando,Flask,Django`
+
+**uwsgi**：与WSGI一样是一种通信协议，是uWSGI服务器的独占协议，用于定义传输信息的类型(type of information)，每一个uwsgi packet前4byte
+为传输信息类型的描述，与WSGI协议是两种东西，据说该协议是fcgi协议的10倍快。
+
+**uWSGI**：是一个web服务器，实现了WSGI协议、uwsgi协议、http协议等。
+
+WSGI协议主要包括server和application两部分：    
+**WSGI server**负责从客户端接收请求，将request转发给application，将application返回的response返回给客户端；   
+**WSGI application**接收由server转发的request，处理请求，并将处理结果返回给server。application中可以包括多个栈式的中间件(middlewares)，
+这些中间件需要同时实现server与application，因此可以在WSGI服务器与WSGI应用之间起调节作用：对服务器来说，中间件扮演应用程序，对应用程序来说，
+中间件扮演服务器。
+
+WSGI协议其实是定义了一种server与application解耦的规范，即可以有多个实现WSGI server的服务器，也可以有多个实现WSGI application的框架，
+那么就可以选择任意的server和application组合实现自己的web应用。例如uWSGI和Gunicorn都是实现了WSGI server协议的服务器，Django，Flask是
+实现了WSGI application协议的web框架，可以根据项目实际情况搭配使用。
