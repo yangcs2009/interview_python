@@ -47,6 +47,10 @@
         * [1 引用计数](#1-引用计数)
         * [2 标记-清除机制](#2-标记-清除机制)
         * [3 分代技术](#3-分代技术)
+    * [内存泄漏](#内存泄漏)
+        * [产生原因](#产生原因)
+        * [被退出才回收的对象引用](#被退出才回收的对象引用)
+        * [消除循环引用](#消除循环引用)
     * [25 Python的List](#25-python的list)
     * [26 Python的is](#26-python的is)
     * [27 read,readline和readlines](#27-readreadline和readlines)
@@ -1187,6 +1191,83 @@ Python默认定义了三代对象集合，索引数越大，对象存活时间�
 举例：
 当某些内存块M经过了3次垃圾收集的清洗之后还存活时，我们就将内存块M划到一个集合A中去，而新分配的内存都划分到集合B中去。当垃圾收集开始工作时，大多数情况都只对集合B进行垃圾回收，而对集合A进行垃圾回收要隔相当长一段时间后才进行，这就使得垃圾收集机制需要处理的内存少了，效率自然就提高了。在这个过程中，集合B中的某些内存块由于存活时间长而会被转移到集合A中，当然，集合A中实际上也存在一些垃圾，这些垃圾的回收会因为这种分代的机制而被延迟。
 
+## 内存泄漏
+
+[使用gc、objgraph干掉python内存泄露与循环引用！](https://www.cnblogs.com/xybaby/p/7491656.html)
+
+### 产生原因
+
+1. 存在被退出才回收的对象引用（全局变量和类变量）
+2. 循环引用中的对象定义了__del__函数
+
+### 被退出才回收的对象引用
+
+**全局变量和类变量都只会在程序退出的时候才会被回收**:
+
+```python
+_CONNECTIONS = []
+
+# ...
+class Connection(object):
+    def __init__(self, sock, address)
+        pass
+
+def server_loop():
+    # ...
+    sock, address = server_sock.accept()
+    connection = Connection(sock, address)
+    _CONNECTIONS.append(connection)
+    # ...
+    sock.close()
+```
+
+上面把所有建立的连接都放在全局变量 _CONNECTIONS 里, 如果在关闭的时候不从这个列表 里取出(减少引用)则 connection 对象就不会被回收, 
+则每建立一次连接就会有个连接对象和连接 对象引用的对象不会被回收.
+
+如果把对象放在一个类属性里也是一样的, 因为类对象在程序一开始就分配, 并在程序退出时才被回收.
+
+解决办法就是在退出时从列表(或其他对象)里 **解除**对对象的引用(删除)
+
+```python
+_CONNECTIONS = []
+
+# ...
+class Connection(object):
+    def __init__(self, sock, address)
+        pass
+
+def server_loop():
+    # ...
+    sock, address = server_sock.accept()
+    connection = Connection(sock, address)
+    _CONNECTIONS.append(connection)
+    try:
+        # ...
+        sock.close()
+    finally:
+        _CONNECTIONS.remove(connection) # XXX
+```
+
+### 消除循环引用
+
+1. 手动解除(时机不好把握）
+
+2. 使用弱引用weakref
+
+```python
+import weakref
+
+class ConnectionHandler(object):
+    def __init__(self, connection):
+        self._conn = connection
+
+
+class Connection(object):
+    def __init__(self, sock, address)
+        self._conn_handler = ConnectionHandler(weakref.proxy(self)) # XXX
+        
+```
+        
 ## 25 Python的List
 list_resize
 
