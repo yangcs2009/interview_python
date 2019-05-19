@@ -725,38 +725,45 @@ http://stackoverflow.com/questions/3394835/args-and-kwargs
 新式类很早在2.2就出现了,所以旧式类完全是兼容的问题,Python3里的类全部都是新式类.这里有一个MRO问题可以了解下(新式类是广度优先,旧式类是深度优先),<Python核心编程>里讲的也很多.
 
 ## 15 `__new__`和`__init__`的区别
+[stackoverflow](http://stackoverflow.com/questions/674304/pythons-use-of-new-and-init)
 
-这个`__new__`确实很少见到,先做了解吧.
+Use `__new__` when you need to control the creation of a new instance. Use `__init__` when you need to control initialization
+of a new instance.
+
+`__new__` is the first step of instance creation. It's called first, and is responsible for returning a new instance of 
+your class. In contrast, `__init__` doesn't return anything; it's only responsible for initializing the instance after 
+it's been created.
+
+In general, you shouldn't need to override `__new__` unless you're subclassing an immutable type like str, int, unicode or tuple.
 
 1. `__new__`是一个静态方法,而`__init__`是一个实例方法.
 2. `__new__`方法会返回一个创建的实例,而`__init__`什么都不返回.
-3. 只有在`__new__`返回一个cls的实例时后面的`__init__`才能被调用.
+3. 只有在`__new__`返回一个cls的实例后面的`__init__`才能被调用.
 3. 当创建一个新实例时调用`__new__`,初始化一个实例时用`__init__`.
-
-[stackoverflow](http://stackoverflow.com/questions/674304/pythons-use-of-new-and-init)
 
 ps: `__metaclass__`是创建类时起作用.所以我们可以分别使用`__metaclass__`,`__new__`和`__init__`来分别在类创建,实例创建和实例初始化的时候做一些小手脚.
 
 ## 16 单例模式
 
-这个绝对常考啊.绝对要记住1~2个方法,当时面试官是让手写的.
+[Python 中的单例模式](http://funhacks.net/2017/01/17/singleton/)   
+[单例模式](https://www.jianshu.com/p/ec6589e02e2f)
 
 为什么？即为什么要使用这个设计模式，在使用这个模式之前存在什么样的问题？  
 是什么？通过Python语言来去实现这个设计模式，用于解决为什么中提到的问题。  
 怎么用？理解了为什么我们也就基本了解了什么情况下使用这个模式，不过在这里还是会细化使用场景，阐述模式的局限和优缺点。  
 
-**单例模式（Singleton Pattern）**是一种常用的软件设计模式，该模式的主要目的是确保某 **一个类只有一个实例存在**。当你希望在整个系统中，某个类只能出现一个实例时，单例对象就能派上用场。  
+**单例模式**（Singleton Pattern）是一种常用的软件设计模式，该模式的主要目的是确保某 **一个类只有一个实例存在**。当你希望在整个系统中，某个类只能出现一个实例时，单例对象就能派上用场。  
 ### 为什么
 我们首先来看看单例模式的使用场景，然后再来分析为什么需要单例模式。  
 
-Python的logger就是一个单例模式，用以日志记录  
-Windows的资源管理器是一个单例模式  
-线程池，数据库连接池等资源池一般也用单例模式  
-网站计数器  
+* Python的logger就是一个单例模式，用以日志记录  
+* Windows的资源管理器是一个单例模式  
+* 线程池，数据库连接池等资源池一般也用单例模式  
+* 网站计数器  
 
 从这些使用场景我们可以总结下什么情况下需要单例模式：  
 
-当每个实例都会占用资源，而且实例初始化会影响性能，这个时候就可以考虑使用单例模式，它给我们带来的好处是只有一个实例占用资源，并且只需初始化一次；  
+当每个实例都会占用资源，而且实例初始化会影响性能，这个时候就可以考虑使用单例模式，它给我们带来的好处是 **只有一个实例占用资源，并且只需初始化一次**；  
 当有同步需要的时候，可以通过一个实例来进行同步控制，比如对某个共享文件（如日志文件）的控制，对计数器的同步控制等，这种情况下由于只有一个实例，所以不用担心同步问题。  
 
 当然所有使用单例模式的前提是我们的确用一个实例就可以搞定要解决的问题，而不需要多个实例，如果每个实例都需要维护自己的状态，这种情况下单例模式肯定是不适用的。  
@@ -767,11 +774,11 @@ Windows的资源管理器是一个单例模式
 
 ```python
 class Singleton(object):
-    __instance = None
+    _instance = None
     def __new__(cls, *args, **kwargs):  # 这里不能使用__init__，因为__init__是在instance已经生成以后才去调用的
         if cls.__instance is None:
-            cls.__instance = super(Singleton, cls).__new__(cls, *args, **kwargs)
-        return cls.__instance
+            cls._instance = super(Singleton, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
 
 s1 = Singleton()
 s2 = Singleton()
@@ -961,9 +968,6 @@ if __name__ == '__main__':
 这里的代码有一点小问题，就是在打印的时候有可能x属性已经被别的线程+1了，所以有可能导致同一个数打印多次，而有的数没有打印，但是不影响最终x属性的结果，
 所以当所有线程结束之后，属性x最终的值是可以保证正确的。
 
-[参考链接](https://www.jianshu.com/p/ec6589e02e2f)
-
-
 ### 1 使用`__new__`方法
 
 ```python
@@ -997,8 +1001,6 @@ class MyClass2(Borg):
 
 ### 3 装饰器版本
 
-
-
 ```python
 def singleton(cls, *args, **kw):
     instances = {}
@@ -1015,7 +1017,7 @@ class MyClass:
 
 ### 4 import方法
 
-作为python的模块是天然的单例模式
+python的模块是天然的单例模式
 
 ```python
 # mysingleton.py
