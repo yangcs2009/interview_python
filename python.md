@@ -69,6 +69,11 @@
             * [总结](#总结)
     * [37 wsgi](#37-wsgi)
             * [什么是WSGI](#什么是wsgi)
+    * [Django、Tornado和Flask框架](#djangotornado和flask框架)
+    * [正向代理和反向代理](#正向代理和反向代理)
+        * [区别](#区别)
+        * [正向代理的应用](#正向代理的应用)
+        * [反向代理的应用](#反向代理的应用)
 
 <!-- vim-markdown-toc -->
 # Python语言特性
@@ -1443,8 +1448,12 @@ from语句用于将模块中的具体定义加载到当前命名空间中。from
 ## 37 wsgi
 
 #### 什么是WSGI
-首先介绍几个关于WSGI相关的概念  
-**WSGI**：全称是`Web Server Gateway Interface`，WSGI不是服务器，python模块，框架，API或者任何软件，只是一种 **规范**，描述web server如何
+![wsgi.jpeg](img/python/wsgi.jpeg)  
+Python WSGI 的出现，让开发者可以将 Web 框架与 Web 服务器的选择分隔开来，不再相互限制。现在，你可以真正地将不同的 Web 服务器与 Web 框架进行
+混合搭配，选择满足自己需求的组合。例如，可以使用 Gunicorn 或 Nginx/uWSGI 来运行 Django、Flask 或 web.py 应用。
+
+几个关于WSGI相关的概念  
+**WSGI**：全称是`Web Server Gateway Interface`，WSGI不是服务器，python模块，框架，API或者任何软件，只是一种<span style="color:red">规范</span>.，描述web server如何
 与web application通信的规范。server和application的规范在PEP 3333中有具体描述。要实现WSGI协议，必须同时实现web server和web application，
 当前运行在WSGI协议之上的web框架有`Torando,Flask,Django`
 
@@ -1453,6 +1462,7 @@ from语句用于将模块中的具体定义加载到当前命名空间中。from
 
 **uWSGI**：是一个web服务器，实现了WSGI协议、uwsgi协议、http协议等。
 
+![webserver.png](img/python/webserver.png)    
 WSGI协议主要包括server和application两部分：    
 **WSGI server**负责从客户端接收请求，将request转发给application，将application返回的response返回给客户端；   
 **WSGI application**接收由server转发的request，处理请求，并将处理结果返回给server。application中可以包括多个栈式的中间件(middlewares)，
@@ -1462,3 +1472,60 @@ WSGI协议主要包括server和application两部分：
 WSGI协议其实是定义了一种server与application解耦的规范，即可以有多个实现WSGI server的服务器，也可以有多个实现WSGI application的框架，
 那么就可以选择任意的server和application组合实现自己的web应用。例如uWSGI和Gunicorn都是实现了WSGI server协议的服务器，Django，Flask是
 实现了WSGI application协议的web框架，可以根据项目实际情况搭配使用。
+
+## Django、Tornado和Flask框架
+在Python的web开发框架中，目前使用量最高的有Django、Flask和Tornado， **Django大而全、Flask小而精、Tornado性能高**。
+
+Django是Python中最全能的web开发框架，走大而全的方向。它最出名的是其 **全自动化的管理后台**：只需要使用起ORM，做简单的对象定义，它就能自动生
+成数据库结构、以及全功能的管理后台。不过Django提供的方便，也意味着Django内置的ORM跟框架内的其他模块耦合程度高， **深度绑定了该框架**，应用程序必须
+使用Django内置的ORM，否则就不能享受到框架内提供的种种基于其ORM的优秀特性。
+
+Tornado全称Tornado Web Server，是一个用Python语言写成的Web服务器兼Web应用框架。Tornado走的是少而精的方向，注重的是 **性能优越**，它最出名的是
+**异步非阻塞的服务器方式**。(Tornado框架和服务器一起组成一个WSGI的全栈替代品。单独在WSGI容器中使用tornado web框架或者tornaod http服务器，
+有一定的局限性，为了最大化的利用tornado的性能，推荐同时使用tornaod的web框架和HTTP服务器。)
+
+Flask是一个使用 Python 编写的 **轻量级Web应用框架**，也被称为 “microframework”，语法简单，部署很方便，整个框架自带了路径映射、
+模板引擎（Jinja2）、简单的数据库访问等web框架组件，支持WSGI协议（采用 Werkzeug）。Flask使用 BSD 授权。 Flask使用简单的核心，用
+extension 增加其他功能，虽然没有默认使用的数据库、窗体验证工具，然而Flask保留了扩增的弹性，可以用Flask-extension加入ORM、窗体验证工具、
+文件上传、各种开放式身份验证技术这些功能。
+
+从性能上看Tornado 比Django、Flask等主流 Web 服务器框架相比有着明显的区别：它是非阻塞式服务器，速度相当快。然而 Tornado 相比 Django
+和Flask属于较为原始的框架，插件少，许多内容需要自己去处理。而Flask插件多，文档非常专业，有专门的公司团队维护，对于快速开发很有效率。
+由于WSGI协议的存在，可以结合 Tornado 的服务器异步特性、并发处理能力和Flask的文档和扩展能力为一体。虽然像Django，Flask框架都有自己实现的
+简单的WSGI服务器，但一般用于服务器调试，生产环境下建议用其他WSGI服务器，比如Nginx+uwsgi+Django方式。
+
+## 正向代理和反向代理
+
+[正向代理和反向代理](https://blog.csdn.net/zt15732625878/article/details/78941268)
+
+### 区别
+
+* 位置不同 
+正向代理，架设在客户机和目标主机之间；  
+反向代理，架设在服务器端；
+
+* 代理对象不同 
+正向代理，代理客户端，服务端不知道实际发起请求的客户端；   
+反向代理，代理服务端，客户端不知道实际提供服务的服务端；   
+
+![proxy.png](img/python/proxy.png)  
+备注：正向代理–HTTP代理为多个人提供翻墙服务；反向代理–百度外卖为多个商户提供平台给某个用户提供外卖服务。
+
+* 用途不同 
+正向代理，为在防火墙内的局域网客户端提供访问Internet的途径；   
+反向代理，将防火墙后面的服务器提供给Internet访问；  
+
+* 安全性不同 
+正向代理允许客户端通过它访问任意网站并且隐藏客户端自身，因此必须采取安全措施以确保仅为授权的客户端提供服务；   
+反向代理都对外都是透明的，访问者并不知道自己访问的是哪一个代理。
+
+### 正向代理的应用
+    1. 访问原来无法访问的资源 
+    2. 用作缓存，加速访问速度 
+    3. 对客户端访问授权，上网进行认证 
+    4. 代理可以记录用户访问记录（上网行为管理），对外隐藏用户信息
+
+### 反向代理的应用
+    1. 保护内网安全 
+    2. 负载均衡 
+    3. 缓存，减少服务器的压力 
