@@ -127,6 +127,9 @@
 数据在传输过程中需要在应用程序地址空间和内核进行多次数据拷贝操作，这些数据拷贝操作所带来的CPU以及内存开销是非常大的。
 
 ### 二 IO模式
+[5种网络IO模型](https://blog.csdn.net/xiexievv/article/details/44976215)  
+[聊聊Linux 五种IO模型](https://www.jianshu.com/p/486b0965c296)
+
 刚才说了，对于一次IO访问（以read举例），数据会先被拷贝到操作系统内核的缓冲区中，然后才会从操作系统内核的缓冲区拷贝到应用程序的
 地址空间。所以说，当一个read操作发生时，它会经历`两个阶段`：
 
@@ -213,18 +216,19 @@ block进程。但是，当kernel中数据准备好的时候，recvfrom会将数�
 过程中，进程完全没有被block。
 
 各个IO Model的比较如图所示：  
-![comparison](/img/linux/comparison.png)
+![comparison](/img/linux/io模型对比.png)
 
 通过上面的图片，可以发现non-blocking IO和asynchronous IO的区别还是很明显的。在non-blocking IO中，虽然进程大部分时间都
 不会被block，但是它仍然要求进程去主动的check，并且当数据准备完成以后，也需要进程主动的再次调用recvfrom来将数据拷贝到用户内存。
-而asynchronous IO则完全不同。它就像是用户进程将整个IO操作交给了他人（kernel）完成，然后他人做完后发信号通知。在此期间，用户
-进程不需要去检查IO操作的状态，也不需要主动的去拷贝数据。
+而asynchronous IO则完全不同。它就像是用户进程将整个IO操作交给了他人（kernel）完成，然后他人做完后发信号通知。在此期间，用户进程不需要
+去检查IO操作的状态，也不需要主动的去拷贝数据。
 
 ### 三 I/O 多路复用之select、poll、epoll详解
+[selec,poll和epoll区别总结](http://www.cnblogs.com/Anker/p/3265058.html)
+
 select，poll，epoll都是IO多路复用的机制。I/O多路复用就是通过一种机制，一个进程可以监视多个描述符，一旦某个描述符就绪
 （一般是读就绪或者写就绪），能够通知程序进行相应的读写操作。但`select，poll，epoll本质上都是同步I/O`，因为他们都需要在读写事件
-就绪后自己负责进行读写，也就是说这个读写过程是阻塞的，而异步I/O则无需自己负责进行读写，异步I/O的实现会负责把数据从内核拷贝到用户
-空间。（这里啰嗦下）
+就绪后自己负责进行读写，也就是说这个读写过程是阻塞的，而异步I/O则无需自己负责进行读写，异步I/O的实现会负责把数据从内核拷贝到用户空间。
 
 #### select
 `int select (int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);`  
@@ -232,8 +236,18 @@ select 函数监视的文件描述符分3类，分别是writefds、readfds、和
 （有数据可读、可写、或者有except），或者超时（timeout指定等待时间，如果立即返回设为null即可），函数返回。当select函数返回后，
 可以通过遍历fdset，来找到就绪的描述符。
 
-select目前几乎在所有的平台上支持，其良好`跨平台支持`也是它的一个优点。select的一个缺点在于`单个进程能够监视的文件描述符的数量
-存在最大限制`，在Linux上一般为1024，可以通过修改宏定义甚至重新编译内核的方式提升这一限制，但是这样也会造成效率的降低。
+select目前几乎在所有的平台上支持，其良好`跨平台支持`也是它的一个优点。select的一个缺点在于`单个进程能够监视的文件描述符的数量存在最大限制`，
+在Linux上一般为1024，可以通过修改宏定义甚至重新编译内核的方式提升这一限制，但是这样也会造成效率的降低。
+
+##### select缺点:
+
+1. select支持的文件描述符数量太小，默认1024，epoll无限制，所支持的FD上限是最大可以打开文件的数目，可查看`/proc/sys/fs/file-max`
+2. 查找配对速度慢，每次调用select都需要在内核遍历传递进来的 **所有fd**，这个开销在fd很多时也很大
+3. 每次调用select，都需要把fd集合从用户态 **拷贝**到内核态，这个开销在fd很多时会很大
+
+poll改善了第一个缺点
+
+epoll改了三个缺点.
 
 #### poll
 `int poll (struct pollfd *fds, unsigned int nfds, int timeout);`  
@@ -247,13 +261,15 @@ struct pollfd {
 };
 ```
 
-pollfd结构包含了要监视的event和发生的event，不再使用select“参数-值”传递的方式。同时，pollfd并没有最大数量限制（但是数量过
-大后性能也是会下降）。 和select函数一样，poll返回后，需要轮询pollfd来获取就绪的描述符。
+pollfd结构包含了要监视的event和发生的event，不再使用select“参数-值”传递的方式。同时，pollfd并没有最大数量限制（但是数量过大后性能也是会下降）。 
+和select函数一样，poll返回后，需要轮询pollfd来获取就绪的描述符。
 
-`从上面看，select和poll都需要在返回后，通过 **遍历文件描述符**来获取已经就绪的socket。事实上，同时连接的大量客户端在一时刻可能只有
+`从上面看，select和poll都需要在返回后，通过遍历文件描述符来获取已经就绪的socket。事实上，同时连接的大量客户端在一时刻可能只有
 很少的处于就绪状态，因此随着监视的描述符数量的增长，其效率也会线性下降。`
 
 #### epoll
+[关于epoll的介绍](http://www.cnblogs.com/my_life/articles/3968782.html)
+
 epoll是在2.6内核中提出的，是之前的select和poll的增强版本。相对于select和poll来说，epoll更加灵活，`没有描述符限制`。epoll
 使用一个文件描述符管理多个描述符，将用户关系的文件描述符的事件存放到内核的一个事件表中，这样在用户空间和内核空间的copy只需一次。
 
@@ -297,8 +313,7 @@ EPOLLONESHOT：只监听一次事件，当监听完这次事件之后，如果�
 3.int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout);  
 等待epfd上的io事件，最多返回maxevents个事件。
 参数events用来从内核得到事件的集合，maxevents告之内核这个events有多大，这个maxevents的值不能大于创建epoll_create()时的
-size，参数timeout是超时时间（毫秒，0会立即返回，-1将不确定，也有说法说是永久阻塞）。该函数返回需要处理的事件数目，如返回0表示
-已超时。
+size，参数timeout是超时时间（毫秒，0会立即返回，-1将不确定，也有说法说是永久阻塞）。该函数返回需要处理的事件数目，如返回0表示已超时。
 
 ##### 二 工作模式
 epoll对文件描述符的操作有两种模式：LT（level trigger）和ET（edge trigger）。LT模式是默认模式，LT模式与ET模式的区别如下：  
@@ -312,13 +327,15 @@ LT(level triggered)是缺省的工作方式，并且同时支持block和no-block
 然后你可以对这个就绪的fd进行IO操作。如果你不作任何操作，内核还是会继续通知你的。
 
 2.ET模式  
-ET(edge-triggered)是高速工作方式，只支持no-block socket。在这种模式下，当描述符从未就绪变为就绪时，内核通过epoll告诉你。
-然后它会假设你知道文件描述符已经就绪，并且不会再为那个文件描述符发送更多的就绪通知，直到你做了某些操作导致那个文件描述符不再为就绪
-状态了(比如，你在发送，接收或者接收请求，或者发送接收的数据少于一定量时导致了一个EWOULDBLOCK 错误）。但是请注意，如果一直不对
+ET(edge-triggered)是高速工作方式，只支持 **no-block socket**。在这种模式下，当描述符从未就绪变为就绪时，内核通过epoll告诉你。
+然后它会假设你知道文件描述符已经就绪，并且不会再为那个文件描述符发送更多的就绪通知，直到你做了某些操作导致那个文件描述符不再为就绪状态了(
+比如，你在发送，接收或者接收请求，或者发送接收的数据少于一定量时导致了一个EWOULDBLOCK 错误）。但是请注意，如果一直不对
 这个fd作IO操作(从而导致它再次变成未就绪)，内核不会发送更多的通知(only once)
 
 ET模式在很大程度上减少了epoll事件被重复触发的次数，因此效率要比LT模式高。epoll工作在ET模式的时候，必须使用非阻塞套接口，以避免
 由于一个文件句柄的阻塞读/阻塞写操作把处理多个文件描述符的任务饿死。
+
+**LT可以理解为水平触发，只要有数据可以读，不管怎样都会通知。而ET为边缘触发，只有状态发生变化时才会通知，可以理解为电平变化。**
 
 3.总结  
 假如有这样一个例子：  
@@ -497,9 +514,9 @@ static void modify_event(int epollfd,int fd,int state){
 ```
 
 ##### 四 epoll总结
-`在 select/poll中，进程只有在调用一定的方法后，内核才对所有监视的文件描述符进行扫描，而epoll事先通过epoll_ctl()来注册一个文件
-描述符，一旦基于某个文件描述符就绪时，内核会采用类似callback的回调机制，迅速激活这个文件描述符，当进程调用epoll_wait() 时便
-得到通知。(此处去掉了遍历文件描述符，而是 **通过监听回调的的机制**。这正是epoll的魅力所在。)`
+`在select/poll中，进程只有在调用一定的方法后，内核才对所有监视的文件描述符进行扫描，而epoll事先通过epoll_ctl()来注册一个文件
+描述符，一旦基于某个文件描述符就绪时，内核会采用类似callback的回调机制，迅速激活这个文件描述符，当进程调用epoll_wait() 时便得到通知。(
+此处去掉了遍历文件描述符，而是通过监听回调的的机制。这正是epoll的魅力所在。)`
 
 epoll的`优点`主要是一下几个方面：
 
