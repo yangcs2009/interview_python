@@ -159,7 +159,7 @@ b+树就不知道下一步该查哪个节点，因为建立搜索树的时候nam
 ### MyISAM索引实现
 MyISAM引擎使用B+Tree作为索引结构，叶节点的data域存放的是数据记录的地址。下图是MyISAM索引的原理图：  
 ![myisam主索引](img/database/myisam主索引.png)    
-这里设表一共有三列，假设我们以Col1为主键，则图8是一个MyISAM表的主索引（Primary key）示意。可以看出MyISAM的索引文件仅仅保存数据记录的地址。
+这里数据表一共有三列，假设我们以Col1为主键，上图是一个MyISAM表的主索引（Primary key）示意。可以看出MyISAM的索引文件仅仅保存数据记录的地址。
 在MyISAM中，主索引和辅助索引（Secondary key）在结构上没有任何区别，只是 **主索引要求key是唯一的，而辅助索引的key可以重复**。如果我们在Col2上建立
 一个辅助索引，则此索引的结构如下图所示：  
 ![myisam辅助索引](img/database/myisam辅助索引.png)  
