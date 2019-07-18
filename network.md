@@ -20,7 +20,6 @@
     * [25 理解TCP backlog](#25-理解tcp-backlog)
     * [3 ARP协议](#3-arp协议)
     * [4 urllib和urllib2的区别](#4-urllib和urllib2的区别)
-    * [5 Post和Get](#5-post和get)
     * [6 Cookie和Session](#6-cookie和session)
     * [7 apache和nginx的区别](#7-apache和nginx的区别)
     * [网站用户密码保存](#网站用户密码保存)
@@ -55,6 +54,8 @@
     * [16 中间人攻击](#16-中间人攻击)
     * [17 c10k问题](#17-c10k问题)
     * [18 socket](#18-socket)
+        * [socket是什么](#socket是什么)
+        * [socket工作原理](#socket工作原理)
     * [19 浏览器缓存](#19-浏览器缓存)
     * [20 HTTP1.0和HTTP1.1](#20-http10和http11)
     * [21 Ajax](#21-ajax)
@@ -232,7 +233,7 @@ ssthresh设置为出现拥塞时的发送方窗口值的一半（但不能小于
 ![慢开始](/img/慢开始.jpg)
 
 <1>. 当TCP连接进行初始化时，把拥塞窗口cwnd置为1。前面已说过，为了便于理解，图中的窗口单位不使用字节而使用报文段的个数。
-慢开始门限的初始值设置为16个报文段，即 cwnd = 16 。
+慢开始门限的初始值设置为16个报文段，即 ssthresh = 16 。
 
 <2>. 在执行慢开始算法时，拥塞窗口 cwnd 的初始值为1。以后发送方每收到一个对新报文段的确认ACK，就把拥塞窗口值加倍，
 然后开始下一轮的传输（图中横坐标为传输轮次）。因此拥塞窗口cwnd随着传输轮次按指数规律增长。当拥塞窗口cwnd增长到慢开始门限值
@@ -282,31 +283,40 @@ cwnd 减小到1，并执行慢开始算法，同时把慢开始门限值ssthresh
 当cwnd < rwnd 时，则是网络的拥塞限制发送方窗口的最大值。  
 
 ## 25 理解TCP backlog
-TCP建立连接是要进行三次握手，但是否完成三次握手后，服务器就处理（accept）呢？
-　　客户端connect()返回不代表TCP连接建立成功，有可能此时服务器accept queue已满,OS会直接丢弃后续ACK请求；
-　　客户端以为连接已建立，开始后续调用(譬如send)等待直至超时；
-服务器则等待ACK超时，会重传SYN k, ACK J+1给客户端(重传次数受限net.ipv4.tcp_synack_retries)；
+TCP建立连接是要进行三次握手，但是否完成三次握手后，服务器就处理（accept）呢？  
+　　客户端connect()返回不代表TCP连接建立成功，有可能此时服务器accept queue已满,OS会直接丢弃后续ACK请求；  
+　　客户端以为连接已建立，开始后续调用(譬如send)等待直至超时；  
+服务器则等待ACK超时，会重传SYN k, ACK J+1给客户端(重传次数受限net.ipv4.tcp_synack_retries)；  
 
 注：accept queue溢出，即便SYN queue没有溢出，新连接请求的SYN也可能被drop
-　　backlog其实是一个连接队列
-　　在linux 2.2以前，backlog大小包括了半连接状态和全连接状态两种队列大小。
-　　半连接状态为：服务器处于Listen状态时收到客户端SYN报文时放入半连接队列中，即SYN queue（服务器端口状态为：SYN_RCVD）。
-　　全连接状态为：TCP的连接状态从服务器（SYN+ACK）响应客户端后，到客户端的ACK报文到达服务器之前，则一直保留在半连接状态中；当服务器接收到客户端的ACK报文后，该条目将从半连接队列搬到全连接队列尾部，即 accept queue （服务器端口状态为：ESTABLISHED）。
+　　backlog其实是一个连接队列，在linux 2.2以前，backlog大小包括了半连接状态和全连接状态两种队列大小。  
+　　半连接状态为：服务器处于Listen状态时收到客户端SYN报文时放入半连接队列中，即SYN queue（服务器端口状态为：SYN_RCVD）。  
+　　全连接状态为：TCP的连接状态从服务器（SYN+ACK）响应客户端后，到客户端的ACK报文到达服务器之前，则一直保留在半连接状态中；当服务器接收到客户端的ACK报文后，
+该条目将从半连接队列搬到全连接队列尾部，即 accept queue （服务器端口状态为：ESTABLISHED）。
 
-　　在Linux内核2.2之后，分离为两个backlog来分别限制半连接（SYN_RCVD状态）队列大小和全连接（ESTABLISHED状态 established）队列大小。
-　　SYN queue 队列长度由 /proc/sys/net/ipv4/tcp_max_syn_backlog 指定，默认为2048。
-　　Accept queue 队列长度由 /proc/sys/net/core/somaxconn 和使用listen函数时传入的参数，二者取最小值。默认为128。在Linux内核2.4.25之前，是写死在代码常量 SOMAXCONN ，在Linux内核2.4.25之后，在配置文件 /proc/sys/net/core/somaxconn 中直接修改，或者在 /etc/sysctl.conf 中配置 net.core.somaxconn = 128 。
+　　在Linux内核2.2之后，分离为两个backlog来分别限制半连接（SYN_RCVD状态）队列大小和全连接（ESTABLISHED状态 established）队列大小。  
+　　SYN queue 队列长度由 /proc/sys/net/ipv4/tcp_max_syn_backlog 指定，默认为2048。  
+　　Accept queue 队列长度由 /proc/sys/net/core/somaxconn 和使用listen函数时传入的参数，二者取最小值。默认为128。在Linux内核2.4.25之前，
+是写死在代码常量 SOMAXCONN ，在Linux内核2.4.25之后，在配置文件 /proc/sys/net/core/somaxconn 中直接修改，或者在 /etc/sysctl.conf 中配置
+net.core.somaxconn = 128 。
+
+　　syn floods 攻击就是针对半连接队列的，攻击方不停地建连接，但是建连接的时候只做第一步，第二步中攻击方收到server的syn+ack后故意扔掉什么也不做，
+导致server上这个队列满其它正常请求无法进来
+
 　　![tcp_backlog](img/network/tcp_backlog.jpeg)
 
-　　syn floods 攻击就是针对半连接队列的，攻击方不停地建连接，但是建连接的时候只做第一步，第二步中攻击方收到server的syn+ack后故意扔掉什么也不做，导致server上这个队列满其它正常请求无法进来
-
-在How TCP backlog works in linux一文中，作者给出了比较详细的分析：
-　　第一种实现 方式在底层维护一个由backlog指定大小的队列。服务端收到SYN后，返回一个SYN/ACK，并把连接放入队列中，此时这个连接的状态是SYN_RECEIVED。当客户端返回ACK后，此连接的状态变为ESTABLISHED。队列中只有ESTABLISHED状态的连接能够交由应用处理。第一种实现方式可以简单概括为：一个队列，两种状态。
-　　第二种实现 方式在底层维护一个SYN_RECEIVED队列和一个ESTABLISHED队列，当SYN_RECEIVED队列中的连接返回ACK后，将被移动到ESTABLISHED队列中。backlog指的是ESTABLISHED队列的大小。
+在How TCP backlog works in linux一文中，作者给出了比较详细的分析：  
+　　第一种实现 方式在底层维护一个由backlog指定大小的队列。服务端收到SYN后，返回一个SYN/ACK，并把连接放入队列中，此时这个连接的状态是SYN_RECEIVED。
+当客户端返回ACK后，此连接的状态变为ESTABLISHED。队列中只有ESTABLISHED状态的连接能够交由应用处理。第一种实现方式可以简单概括为：一个队列，两种状态。  
+　　第二种实现 方式在底层维护一个SYN_RECEIVED队列和一个ESTABLISHED队列，当SYN_RECEIVED队列中的连接返回ACK后，将被移动到ESTABLISHED队列中。
+backlog指的是ESTABLISHED队列的大小。
 　　
-　　传统的基于BSD的tcp实现第一种方式，在linux2.2之前，内核也实现第一种方式。当队列满了以后，服务端再收到SYN时，将不会返回SYN/ACK。比较优雅的处理方法就是不处理这条连接，不返回RST，让客户端重试。
-　　在linux2.2后，选择第二种方式实现，SYN_RECEIVED队列的大小由proc/sys/net/ipv4/tcp_max_syn_backlog系统参数指定，ESTABLISHED队列由backlog和/proc/sys/net/core/somaxconn中较小的指定。
-　　但是在windows server中，底层选择winsock API实现，backlog的定义是represents the maximum length of the queue of pending connections for the listener(这是一个比较模糊的定义……来源于BSD)，当队列满了后，将会返回RST。
+　　传统的基于BSD的tcp实现第一种方式，在linux2.2之前，内核也实现第一种方式。当队列满了以后，服务端再收到SYN时，将不会返回SYN/ACK。比较优雅的处理方法
+就是不处理这条连接，不返回RST，让客户端重试。
+　　在linux2.2后，选择第二种方式实现，SYN_RECEIVED队列的大小由proc/sys/net/ipv4/tcp_max_syn_backlog系统参数指定，ESTABLISHED队列由backlog和
+/proc/sys/net/core/somaxconn中较小的指定。  
+　　但是在windows server中，底层选择winsock API实现，backlog的定义是represents the maximum length of the queue of pending connections 
+for the listener(这是一个比较模糊的定义……来源于BSD)，当队列满了后，将会返回RST。
 
 　　考虑这样一种情况，当ESTABLISHED队列满了，此时收到一个连接的ACK，需要将此连接从SYN队列移到ESTABLISHED队列中，会发生什么？
 linux底层的关键代码是:
@@ -316,7 +326,8 @@ listen_overflow:
 		inet_rsk(req)->acked = 1;
 		return NULL;
 	}
-　　除非系统的tcp_abort_on_overflow指定为1（将返回RST），否则底层将不会做任何事情……这是一种委婉的退让策略，在服务端处理不过来时，让客户端误以为ACK丢失，继续重新发送ACK。这样，当服务端的处理能力恢复时，这条连接又可以重新被移动到ESTABLISHED队列中去。
+　　除非系统的tcp_abort_on_overflow指定为1（将返回RST），否则底层将不会做任何事情……这是一种委婉的退让策略，在服务端处理不过来时，让客户端误以为ACK丢失，
+继续重新发送ACK。这样，当服务端的处理能力恢复时，这条连接又可以重新被移动到ESTABLISHED队列中去。  
 
 可以通过ss命令来显示
 
@@ -327,10 +338,12 @@ LISTEN      0      128        :::ssh                  :::*
 LISTEN      0      128        *:ssh                   *:*       
 LISTEN      0      100        ::1:smtp                :::*       
 LISTEN      0      100        127.0.0.1:smtp          *:*
-　　在LISTEN状态，其中 Send-Q 即为Accept queue的最大值，Recv-Q 则表示Accept queue中等待被服务器accept()。
-　　按照前面的理解，这个时候我们能看到有个端口上的服务全连接队列最大是128，但是现在有129个在队列中和等待进队列的，肯定有一个连接进不去队列要overflow掉
+　　在LISTEN状态，其中 Send-Q 即为Accept queue的最大值，Recv-Q 则表示Accept queue中等待被服务器accept()。  
+　　按照前面的理解，这个时候我们能看到有个端口上的服务全连接队列最大是128，但是现在有129个在队列中和等待进队列的，肯定有一个连接进不去队列要overflow掉  
 
-　　另外客户端connect()返回不代表TCP连接建立成功，有可能此时accept queue 已满，系统会直接丢弃后续ACK请求；客户端误以为连接已建立，开始调用等待至超时；服务器则等待ACK超时，会重传SYN+ACK 给客户端，重传次数受限 net.ipv4.tcp_synack_retries ，默认为5，表示重发5次，每次等待30~40秒，即半连接默认时间大约为180秒，该参数可以在tcp被洪水攻击是临时启用这个参数。
+　　另外客户端connect()返回不代表TCP连接建立成功，有可能此时accept queue 已满，系统会直接丢弃后续ACK请求；客户端误以为连接已建立，开始调用等待至超时；
+服务器则等待ACK超时，会重传SYN+ACK 给客户端，重传次数受限 net.ipv4.tcp_synack_retries ，默认为5，表示重发5次，每次等待30~40秒，即半连接默认时间大约为
+180秒，该参数可以在tcp被洪水攻击是临时启用这个参数。
 
 查看SYN queue 溢出
 　　比如下面看到的 667399 times ，表示全连接队列溢出的次数，隔几秒钟执行下，如果这个数字一直在增加的话肯定全连接队列偶尔满了。
@@ -338,6 +351,7 @@ LISTEN      0      100        127.0.0.1:smtp          *:*
 [root@localhost ~]# netstat -s | egrep "listen|LISTEN" 
 667399 times the listen queue of a socket overflowed
 667399 SYNs to LISTEN sockets ignored
+
 查看Accept queue 溢出
 
 [root@localhost ~]# netstat -s | grep TCPBacklogDrop
@@ -368,23 +382,13 @@ TCPBacklogDrop: 2334
 urllib2 can accept a Request object to set the headers for a URL request, urllib accepts only a URL. That means, you cannot masquerade your User Agent string etc.  
 urllib provides the urlencode method which is used for the generation of GET query strings, urllib2 doesn't have such a function. This is one of the reasons why urllib is often used along with urllib2.
 
-
-## 5 Post和Get
-[GET和POST有什么区别？及为什么网上的多数答案都是错的](http://www.cnblogs.com/nankezhishi/archive/2012/06/09/getandpost.html)
-[知乎回答](https://www.zhihu.com/question/31640769?rf=37401322)
-
-get: [RFC 2616 - Hypertext Transfer Protocol -- HTTP/1.1](http://tools.ietf.org/html/rfc2616#section-9.3)
-post: [RFC 2616 - Hypertext Transfer Protocol -- HTTP/1.1](http://tools.ietf.org/html/rfc2616#section-9.5)
-
-
-
 ## 6 Cookie和Session
 
 ||Cookie|Session|
 |:--|:--|:--|
 |储存位置|客户端|服务器端|
 |目的|跟踪会话，也可以保存用户偏好设置或者保存用户名密码等|跟踪会话|
-|安全性|不安全|安全|
+|安全性|不安全，别人可以分析存放在本地的COOKIE并进行COOKIE欺骗|安全|
 
 session技术是要使用到cookie的，之所以出现session技术，主要是为了安全。
 
@@ -597,6 +601,11 @@ Web服务器解析请求，定位请求资源。服务器将资源复本写到TC
 6. 浏览器将该 html 文本并显示内容;
 
 ### GET和POST请求的区别
+get: [RFC 2616 - Hypertext Transfer Protocol -- HTTP/1.1](http://tools.ietf.org/html/rfc2616#section-9.3)  
+post: [RFC 2616 - Hypertext Transfer Protocol -- HTTP/1.1](http://tools.ietf.org/html/rfc2616#section-9.5)
+
+一个用于获取数据，一个用于修改数据。
+
 GET请求  
 ```xml
 GET /books/?sex=man&name=Professional HTTP/1.1
@@ -708,6 +717,13 @@ PUT所对应的URI是要创建或更新的资源本身。比如：`PUT http://ww
 
 推荐: http://www.ruanyifeng.com/blog/2011/09/restful.html
 
+Fielding将他对互联网软件的架构原则，定名为REST，即`Representational State Transfer`的缩写。我对这个词组的翻译是"表现层状态转化"。如果一个架构符合REST原则，就称它为RESTful架构。
+
+总结一下什么是RESTful架构：
+
+1. 每一个URI代表一种资源；
+2. 客户端和服务器之间，传递这种资源的某种表现层；
+3. 客户端通过四个HTTP动词，对服务器端资源进行操作，实现"表现层状态转化"。
 
 ## 13 SOAP
 
@@ -731,26 +747,36 @@ WSGI, Web Server Gateway Interface，是Python应用程序或框架和Web服务�
 
 ## 16 中间人攻击
 
-在GFW里屡见不鲜的,呵呵.
-
-中间人攻击（Man-in-the-middle attack，通常缩写为MITM）是指攻击者与通讯的两端分别创建独立的联系，并交换其所收到的数据，使通讯的两端认为他们正在通过一个私密的连接与对方直接对话，但事实上整个会话都被攻击者完全控制。
+中间人攻击（Man-in-the-middle attack，通常缩写为MITM）是指攻击者与通讯的两端分别创建独立的联系，并交换其所收到的数据，使通讯的两端认为他们
+正在通过一个私密的连接与对方直接对话，但事实上整个会话都被攻击者完全控制。  
+关键是中间人用自己的密钥替换了消息中被攻击者的密钥
 
 ## 17 c10k问题
 
 所谓c10k问题，指的是服务器同时支持成千上万个客户端的问题，也就是concurrent 10 000 connection（这也是c10k这个名字的由来）。
-推荐: http://www.kegel.com/c10k.html
+推荐: http://www.kegel.com/c10k.html   
+[聊聊C10K问题及解决方案](https://my.oschina.net/xianggao/blog/664275)
 
 ## 18 socket
 
 推荐: http://www.360doc.com/content/11/0609/15/5482098_122692444.shtml
 
-Socket=Ip address+ TCP/UDP + port
+### socket是什么
+![socket.jpg](img/network/socket.jpg)  
+
+Socket=Ip address+ TCP/UDP + port  
+Socket是应用层与TCP/IP协议族通信的中间软件抽象层，它是一组接口，它把复杂的TCP/IP协议族隐藏在Socket接口后面。
+
+### socket工作原理
+![socket_connection](img/network/socket_connection.jpg)
+
+服务器端先初始化Socket，然后与端口绑定(bind)，对端口进行监听(listen)，调用accept阻塞，等待客户端连接。  
+这时如果有个客户端初始化一个Socket，然后连接服务器(connect)，如果连接成功，这时客户端与服务器端的连接就建立了。  
+客户端发送数据请求，服务器端接收请求并处理请求，然后把回应数据发送给客户端，客户端读取数据，最后关闭连接，一次交互结束。
 
 ## 19 浏览器缓存
 
 推荐: http://www.cnblogs.com/skynet/archive/2012/11/28/2792503.html
-
-304 Not Modified
 
 ## 20 HTTP1.0和HTTP1.1
 
