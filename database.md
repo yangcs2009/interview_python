@@ -147,10 +147,10 @@ B-Tree有许多变种，其中最常见的是B+Tree，例如MySQL就普遍使用
 
 每个节点的指针上限为2d而不是2d+1。
 
-**内节点不存储data，只存储key；叶子节点不存储指针。**
+**内节点不存储data，只存储key；叶子节点不存储指针。**  
 B+Tree更适合外存索引，原因和内节点出度d有关。从上面分析可以看到，d越大索引的性能越好，而出度的上限取决于节点内key和data的大小：
 
-dmax=floor(pagesize/(keysize+datasize+pointsize))
+dmax=floor(pagesize/(keysize+datasize+pointsize))  
 floor表示向下取整。由于B+Tree内节点去掉了data域，因此可以拥有更大的出度，拥有更好的性能。
 
 ![b+树.png](img/database/b+树.png)
