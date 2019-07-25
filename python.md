@@ -1158,7 +1158,7 @@ d =  [1, 2, 3, 4, ['a', 'b']]
 
 [Python垃圾回收机制](http://www.jianshu.com/p/1e375fb40506)
 
-Python GC主要使用引用计数（reference counting）来跟踪和回收垃圾。在引用计数的基础上，通过“标记-清除”（mark and sweep）解决容器对象可能产生的循环引用问题，通过“分代回收”（generation collection）以空间换时间的方法提高垃圾回收效率。
+Python GC主要使用引用计数（reference counting）来跟踪和回收垃圾。在引用计数的基础上，通过“标记-清除”（mark and sweep）解决容器对象可能产生的 **循环引用**问题，通过“分代回收”（generation collection）以空间换时间的方法提高垃圾回收效率。
 
 ### 1 引用计数
 
@@ -1186,7 +1186,7 @@ PyObject是每个对象必有的内容，其中`ob_refcnt`就是做为引用计�
 2. 循环引用
 
 ### 2 标记-清除机制
-
+[标记清除解决循环引用](https://andrewpqc.github.io/2018/10/08/python-memory-management/)  
 基本思路是先按需分配，等到没有空闲内存的时候从寄存器和程序栈上的引用出发，遍历以对象为节点、以引用为边构成的图，把所有可以访问到的对象打上标记，然后清扫一遍内存空间，把所有没标记的对象释放。
 
 ### 3 分代技术
