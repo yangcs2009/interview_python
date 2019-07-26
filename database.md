@@ -24,9 +24,11 @@
         * [memcached](#memcached)
             * [memcached的内存管理机制](#memcached的内存管理机制)
         * [Redis](#redis)
-            * [Redis数据模型图](#redis数据模型图)
+            * [Redis编码模式](#redis编码模式)
+            * [Redis内存管理](#redis内存管理)
             * [6种的数据淘汰策略](#6种的数据淘汰策略)
             * [应用场景](#应用场景)
+            * [单线程的redis为什么这么快](#单线程的redis为什么这么快)
     * [4 乐观锁和悲观锁](#4-乐观锁和悲观锁)
     * [5 MVCC](#5-mvcc)
     * [6 MyISAM和InnoDB](#6-myisam和innodb)
@@ -301,14 +303,34 @@ chunk供下次有适合大小item时使用，当我们用完这所有的5242个c
 对于key-value信息，最好不要超过1m的大小；同时信息长度最好相对是比较均衡稳定的，这样能够保障最大限度的使用内存；同时，memcached采用的LRU清理策略，合理甚至过期时间，提高命中率。
 
 ### Redis
-[redis设计与实现笔记](https://blog.csdn.net/yangcs2009/article/details/50637165)
-#### Redis数据模型图
+[redis设计与实现笔记](https://blog.csdn.net/yangcs2009/article/details/50637165)  
+[Redis数据结构](https://zhuanlan.zhihu.com/p/68607184)
+
+#### Redis编码模式
 ![Redis数据模型图](img/database/encoding.png)  
-字符串可以被编码为embstr(小于39字节）、raw（一般字符串）或int（为了节约内存，Redis会将字符串表示的64位有符号整数编码为整数来进行储存）；  
-列表可以被编码为ziplist或linkedlist，ziplist是为节约大小较小的列表空间而作的特殊表示；  
+字符串可以被编码为embstr(小于39字节）、raw（一般字符串）或int（为了节约内存，Redis会将字符串表示的64位有符号整数编码为整数来进行储存）；
+  
+![quicklist.jpg](img/database/quicklist.jpg)   
+列表可以被编码为ziplist或linkedlist，ziplist是为节约大小较小的列表空间而作的特殊表示。3.2版本开始使用quicklist，quickList 是 zipList 
+和 linkedList 的混合体。它将 linkedList 按段切分，每一段使用 zipList 来紧凑存储，多个 zipList 之间使用双向指针串接起来。因为链表的附加空间
+相对太高，prev 和 next 指针就要占去 16 个字节 (64bit 系统的指针是 8 个字节)，另外每个节点的内存都是单独分配，会加剧内存的碎片化，影响内存管理效率；  
 集合可以被编码为intset或者hashtable，intset是只储存数字的小集合的特殊表示；  
 hash表可以编码为ziplist或者hashtable，zipmap是小hash表的特殊表示；  
 有序集合可以被编码为ziplist或者skiplist格式，ziplist用于表示小的有序集合，而skiplist则用于表示任何大小的有序集合。  
+
+#### Redis内存管理
+
+**空间预分配**：如果对一个SDS进行修改，分为一下两种情况：
+
+1. DS长度（len的值）小于1MB，那么程序将分配和len属性同样大小的未使用空间，这时free和len属性值相同。举个例子，SDS的len将变成15字节，则程序
+也会分配15字节的未使用空间，SDS的buf数组的实际长度变成15+15+1=31字节（额外一个字节用户保存空字符）。
+2. SDS长度（len的值）大于等于1MB，程序会分配1MB的未使用空间。比如进行修改之后，SDS的len变成30MB，那么它的实际长度是30MB+1MB+1byte。
+
+**惰性释放空间**：当执行sdstrim（截取字符串）之后，SDS不会立马释放多出来的空间，如果下次再进行拼接字符串操作，且拼接的没有刚才释放的空间大，
+则那些未使用的空间就会排上用场。通过惰性释放空间避免了特定情况下操作字符串的内存重新分配操作。
+
+**杜绝缓冲区溢出**：使用C字符串的操作时，如果字符串长度增加（如strcat操作）而忘记重新分配内存，很容易造成缓冲区的溢出；而SDS由于记录了长度，
+相应的操作在可能造成缓冲区溢出时会自动重新分配内存，杜绝了缓冲区溢出。
 
 #### 6种的数据淘汰策略
 1. volatile-lru：从已设置过期时间的数据集（server.db[i].expires）中挑选最近最少使用的数据淘汰；
@@ -320,6 +342,12 @@ hash表可以编码为ziplist或者hashtable，zipmap是小hash表的特殊表�
 
 #### 应用场景
 [应用场景](https://blog.csdn.net/hguisu/article/details/8836819)
+
+* String：缓存、限流、计数器、分布式锁、分布式Session
+* Hash：存储用户信息、用户主页访问量、组合查询
+* List：微博关注人时间轴列表、简单队列
+* Set：赞、踩、标签、好友关系
+* Zset：排行榜
 
 * 在主页中显示最新的项目列表：Redis使用的是常驻内存的缓存，速度非常快。LPUSH用来插入一个内容ID，作为关键字存储在列表头部。LTRIM用来限制列表中
 的项目数最多为5000。如果用户需要的检索的数据量超越这个缓存容量，这时才需要把请求发送到数据库。  
@@ -335,6 +363,13 @@ ZADD命令用来按照新的顺序填充生成列表。列表可以实现非常�
 * 特定时间内的特定项目：这是特定访问者的问题，可以通过给每次页面浏览使用SADD命令来解决。SADD不会将已经存在的成员添加到一个集合。
 * Pub/Sub：在更新中保持用户对数据的映射是系统中的一个普遍任务。Redis的pub/sub功能使用了SUBSCRIBE、UNSUBSCRIBE和PUBLISH命令，让这个变得更加容易。
 * 队列：在当前的编程中队列随处可见。除了push和pop类型的命令之外，Redis还有阻塞队列的命令，能够让一个程序在执行时被另一个程序添加到队列。
+
+#### 单线程的redis为什么这么快
+
+1. 纯内存操作
+2. 单线程操作，避免了频繁的上下文切换
+3. 采用了非阻塞I/O多路复用机制
+
 ## 4 乐观锁和悲观锁
 
 悲观锁：假定会发生并发冲突，屏蔽一切可能违反数据完整性的操作，访问的时候都要先获得锁，保证同一个时刻只有线程获得锁，读读也会阻塞；
