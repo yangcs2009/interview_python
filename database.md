@@ -308,15 +308,17 @@ chunk供下次有适合大小item时使用，当我们用完这所有的5242个c
 
 #### Redis编码模式
 ![Redis数据模型图](img/database/encoding.png)  
-字符串可以被编码为embstr(小于39字节）、raw（一般字符串）或int（为了节约内存，Redis会将字符串表示的64位有符号整数编码为整数来进行储存）；
+
+* 字符串可以被编码为embstr(小于39字节）、raw（一般字符串）或int（为了节约内存，Redis会将字符串表示的64位有符号整数编码为整数来进行储存）；
   
-![quicklist.jpg](img/database/quicklist.jpg)   
-列表可以被编码为ziplist或linkedlist，ziplist是为节约大小较小的列表空间而作的特殊表示。3.2版本开始使用quicklist，quickList 是 zipList 
+![quicklist.jpg](img/database/quicklist.jpg) 
+  
+* 列表可以被编码为ziplist或linkedlist，ziplist是为节约大小较小的列表空间而作的特殊表示。3.2版本开始使用quicklist，quickList 是 zipList 
 和 linkedList 的混合体。它将 linkedList 按段切分，每一段使用 zipList 来紧凑存储，多个 zipList 之间使用双向指针串接起来。因为链表的附加空间
 相对太高，prev 和 next 指针就要占去 16 个字节 (64bit 系统的指针是 8 个字节)，另外每个节点的内存都是单独分配，会加剧内存的碎片化，影响内存管理效率；  
-集合可以被编码为intset或者hashtable，intset是只储存数字的小集合的特殊表示；  
-hash表可以编码为ziplist或者hashtable，zipmap是小hash表的特殊表示；  
-有序集合可以被编码为ziplist或者skiplist格式，ziplist用于表示小的有序集合，而skiplist则用于表示任何大小的有序集合。  
+* 集合可以被编码为intset或者hashtable，intset是只储存数字的小集合的特殊表示；  
+* hash表可以编码为ziplist或者hashtable，zipmap是小hash表的特殊表示；  
+* 有序集合可以被编码为ziplist或者skiplist格式，ziplist用于表示小的有序集合，而skiplist则用于表示任何大小的有序集合。  
 
 #### Redis内存管理
 
