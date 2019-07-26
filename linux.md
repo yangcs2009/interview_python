@@ -226,6 +226,8 @@ block进程。但是，当kernel中数据准备好的时候，recvfrom会将数�
 ### 三 I/O 多路复用之select、poll、epoll详解
 [selec,poll和epoll区别总结](http://www.cnblogs.com/Anker/p/3265058.html)
 
+[Tornado原理浅析](https://www.jiqizhixin.com/articles/2019-04-10-15)
+
 select，poll，epoll都是IO多路复用的机制。I/O多路复用就是通过一种机制，一个进程可以监视多个描述符，一旦某个描述符就绪
 （一般是读就绪或者写就绪），能够通知程序进行相应的读写操作。但`select，poll，epoll本质上都是同步I/O`，因为他们都需要在读写事件
 就绪后自己负责进行读写，也就是说这个读写过程是阻塞的，而异步I/O则无需自己负责进行读写，异步I/O的实现会负责把数据从内核拷贝到用户空间。
