@@ -21,6 +21,7 @@
                 * [synchronous IO和asynchronous IO的区别](#synchronous-io和asynchronous-io的区别)
         * [三 I/O 多路复用之select、poll、epoll详解](#三-io-多路复用之selectpollepoll详解)
             * [select](#select)
+                * [select缺点:](#select缺点)
             * [poll](#poll)
             * [epoll](#epoll)
                 * [一 epoll操作过程](#一-epoll操作过程)
@@ -28,6 +29,13 @@
                 * [三 代码演示](#三-代码演示)
                 * [四 epoll总结](#四-epoll总结)
         * [参考](#参考)
+    * [理解inode](#理解inode)
+        * [inode是什么？](#inode是什么)
+        * [inode的内容](#inode的内容)
+        * [inode的大小](#inode的大小)
+        * [inode号码](#inode号码)
+        * [inode的特殊作用](#inode的特殊作用)
+        * [Linux下删除正在进行读写操作的文件](#linux下删除正在进行读写操作的文件)
     * [软链接和硬链接](#软链接和硬链接)
         * [inode](#inode)
         * [硬链接](#硬链接)
@@ -590,7 +598,7 @@ Change: 2017-05-17 09:33:48.090467945 +0800
  Birth: -
 ```
 
-总之，除了文件名以外的所有文件信息，都存在inode之中。至于为什么没有文件名，下文会有详细解释。
+总之， **除了文件名以外的所有文件信息，都存在inode之中**。至于为什么没有文件名，下文会有详细解释。
 
 ### inode的大小
 
