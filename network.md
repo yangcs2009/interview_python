@@ -3,11 +3,15 @@
 
 * [网络](#网络)
     * [TCP & UDP](#tcp--udp)
+        * [TCP、UDP概述](#tcpudp概述)
+        * [TCP(Transmission Control Protocol，传输控制协议)与UDP(User Data Protocol，用户数据报协议)区别：](#tcptransmission-control-protocol传输控制协议与udpuser-data-protocol用户数据报协议区别)
+        * [TCP相比UDP为什么是可靠的](#tcp相比udp为什么是可靠的)
     * [三次握手 & 四次挥手](#三次握手--四次挥手)
         * [1 三次握手](#1-三次握手)
         * [2 四次挥手](#2-四次挥手)
         * [TCP的三次握手过程？为什么会采用三次握手，若采用二次握手可以吗？](#tcp的三次握手过程为什么会采用三次握手若采用二次握手可以吗)
-        * [四次挥手释放连接时，等待2MSL的意义？](#四次挥手释放连接时等待2msl的意义)
+        * [四次挥手释放连接时，等待2MSL（TIME_WAIT）的意义？](#四次挥手释放连接时等待2msltime_wait的意义)
+        * [reuse问题](#reuse问题)
     * [TCP流量控制和拥塞控制](#tcp流量控制和拥塞控制)
         * [TCP的流量控制](#tcp的流量控制)
             * [1.利用滑动窗口实现流量控制](#1利用滑动窗口实现流量控制)
@@ -70,7 +74,7 @@
 
 ## TCP & UDP
 
-[TCP、UDP概述](https://blog.fundebug.com/2019/03/22/differences-of-tcp-and-udp/)
+### [TCP、UDP概述](https://blog.fundebug.com/2019/03/22/differences-of-tcp-and-udp/)
 
 TCP/IP 是互联网相关的各类协议族的总称，比如：TCP，UDP，IP，FTP，HTTP，ICMP，SMTP 等都属于 TCP/IP 族内的协议。
 
@@ -83,7 +87,7 @@ TCP/IP模型是互联网的基础，它是一系列网络协议的总称。这�
 * 传输层：负责对报文进行分组和重组，并以TCP或UDP协议格式封装报文。
 * 应用层：负责向用户提供应用程序，比如HTTP、FTP、Telnet、DNS、SMTP等。
 
-TCP(Transmission Control Protocol，传输控制协议)与UDP(User Data Protocol，用户数据报协议)区别总结：  
+### TCP(Transmission Control Protocol，传输控制协议)与UDP(User Data Protocol，用户数据报协议)区别：  
 
 |	|UDP	|TCP|
 | ------ | ------ | ------ |
@@ -93,6 +97,34 @@ TCP(Transmission Control Protocol，传输控制协议)与UDP(User Data Protocol
 |传输方式|	面向报文	|面向字节流
 |首部开销	|首部开销小，仅8字节	|首部最小20字节，最大60字节
 |适用场景	|适用于实时应用（IP电话、视频会议、直播等）	|适用于要求可靠传输的应用，例如文件传输|
+
+
+### TCP相比UDP为什么是可靠的
+
+1. 确认和重传机制
+
+建立连接时三次握手同步双方的“序列号 + 确认号 + 窗口大小信息”，是确认重传、流控的基础
+传输过程中，如果Checksum校验失败、丢包或延时，发送端重传
+
+2.  数据排序
+
+TCP有专门的序列号SN字段，可提供数据re-order
+
+3. 流量控制
+
+窗口和计时器的使用。TCP窗口中会指明双方能够发送接收的最大数据量
+
+4. 拥塞控制
+
+TCP的拥塞控制由4个核心算法组成。
+
+“慢启动”（Slow Start）
+
+“拥塞避免”（Congestion avoidance）
+
+“快速重传 ”（Fast Retransmit）
+
+“快速恢复”（Fast Recovery）
 
 ## 三次握手 & 四次挥手
 
@@ -137,10 +169,27 @@ _注意: 中断连接端可以是客户端，也可以是服务器端. 下面仅
 而是因为网络节点导致延迟达到主机B，主机B以为是主机A又发起的新连接，于是主机B同意连接，并向主机A发回确认，但是此时主机A根本不会理会，主机B就一直在等待主机A发送数据，导致主机B的资源浪费。  
 （3）采用两次握手不行，原因就是上面说的失效的连接请求的特殊情况。
 
-### 四次挥手释放连接时，等待2MSL的意义？  
-第 一，为了保证A发送的最后一个ACK报文段能够到达B。这个ACK报文段有可能丢失，处在LAST-ACK状态的B收不到对已发送的FIN和ACK报文段的确认。
+### 四次挥手释放连接时，等待2MSL（TIME_WAIT）的意义？ 
+1. 可靠地终止TCP连接
+为了保证A发送的最后一个ACK报文段能够到达B。这个ACK报文段有可能丢失，处在LAST-ACK状态的B收不到对已发送的FIN和ACK报文段的确认。
 B会超时重传这个FIN和ACK报文段，而A就能在2MSL时间内收到这个重传的ACK+FIN报文段。接着A重传一次确认。  
-第二，就是防止上面提到的已失效的连接请求报文段出现在本连接中，A在发送完最有一个ACK报文段后，再经过2MSL，就可以使本连接持续的时间内所产生的所有报文段都从网络中消失。
+2. 确保新TCP连接和老TCP连接不会相互干扰
+Linux下，一个TCP端口不能被同时打开两次以上。当一个TCP连接处于TIME-WAIT状时，我们将无法立即使用该连接占用的端口来建立一个新连接。如果不存在
+TIME-WAIT状态，，应用程序再建立一个一样的连接，这时新连接又可能收到旧连接TCP报文段，这显然是不应该发生。
+另外就是防止上面提到的已失效的连接请求报文段出现在本连接中，A在发送完最有一个ACK报文段后，再经过2MSL，就可以使本连接持续的时间内所产生的所有
+报文段都从网络中消失。
+
+### reuse问题
+```
+int option = 1;
+
+if (setsockopt ( masterSocket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option) ) < 0)
+{
+   die( "setsockopt" );
+}
+```
+SO_REUSEADDR 这个套接字选项通知内核，如果端口忙，但TCP状态位于 TIME_WAIT ，可以重用端口。如果端口忙，而TCP状态位于其他状态，重用端口时依旧得到一个错误信息，
+指明”地址已经使用中”。
 
 ## TCP流量控制和拥塞控制
 [参考](http://www.cnblogs.com/way_testlife/archive/2010/10/11/1848241.html)
