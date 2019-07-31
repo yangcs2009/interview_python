@@ -2,6 +2,12 @@
 <!-- vim-markdown-toc GFM -->
 
 * [操作系统](#操作系统)
+    * [进程与线程](#进程与线程)
+        * [多进程](#多进程)
+        * [多线程](#多线程)
+        * [为何引入线程](#为何引入线程)
+        * [同一进程间的线程究竟共享哪些资源呢，而又各自独享哪些资源呢？](#同一进程间的线程究竟共享哪些资源呢而又各自独享哪些资源呢)
+        * [线程和进程各自有什么区别和优劣呢？](#线程和进程各自有什么区别和优劣呢)
     * [2 调度算法](#2-调度算法)
     * [3 死锁](#3-死锁)
     * [4 程序编译与链接](#4-程序编译与链接)
@@ -23,7 +29,87 @@
 
 # 操作系统
 
+## 进程与线程
+### 多进程
+**进程是资源（CPU、内存等）分配的基本单位，它是程序执行时的一个实例**。程序运行时系统就会创建一个进程，并为它分配资源，然后把该进程放入进程就绪队列，
+进程调度器选中它的时候就会为它分配CPU时间，程序开始真正运行。
 
+Linux系统函数fork()可以在父进程中创建一个子进程，这样的话，在一个进程接到来自客户端新的请求时就可以复制出一个子进程让其来处理，父进程只需负责监控请求的到来，
+然后创建子进程让其去处理，这样就能做到并发处理。
+
+```
+# -*- coding:utf-8 -*-
+import os
+
+print('当前进程:%s 启动中 ....' % os.getpid())
+pid = os.fork()
+if pid == 0:
+    print('子进程:%s,父进程是:%s' % (os.getpid(), os.getppid()))
+else:
+    print('进程:%s 创建了子进程:%s' % (os.getpid(),pid ))
+输出结果：
+
+当前进程:27223 启动中 ....
+进程:27223 创建了子进程:27224
+子进程:27224,父进程是:27223
+```
+
+fork函数会返回两次结果，因为操作系统会把当前进程的数据复制一遍，然后程序就分两个进程继续运行后面的代码，fork分别在父进程和子进程中返回，
+在子进程返回的值pid永远是0，在父进程返回的是子进程的进程id。
+
+### 多线程
+线程是程序执行时的最小单位，它是进程的一个执行流， **是CPU调度和分派的基本单位**，一个进程可以由很多个线程组成，线程间共享进程的所有资源，
+每个线程有自己的堆栈和局部变量。线程由CPU独立调度执行，在多CPU环境下就允许多个线程同时运行。同样多线程也可以实现并发操作，每个请求分配一个线程来处理。
+
+### 为何引入线程
+
+1. 应用的需要（实现不同的功能）。比如打开一个浏览器，我想一边浏览网页，一边下载文件，一边播放音乐。如果一个浏览器是一个进程，那么这样的需求需要线程机制。
+
+2. 开销的考虑。在进程内创建、终止线程比创建、终止进程要快。同一进程内的线程间切换比进程间的切换要快,尤其是用户级线程间的切换。线程之间相互通信无须通过内核
+（同一进程内的线程共享内存和文件）
+
+3. 性能的考虑。多个线程中，任务功能不同（有的负责计算，有的负责I/O）,如果有多个处理器，一个进程就可以有很多的任务同时在执行。
+
+### 同一进程间的线程究竟共享哪些资源呢，而又各自独享哪些资源呢？
+共享的资源有  
+
+1. 堆  由于堆是在进程空间中开辟出来的，所以它是理所当然地被共享的；因此new出来的都是共享的（16位平台上分全局堆和局部堆，局部堆是独享的）
+2. 全局变量 它是与具体某一函数无关的，所以也与特定线程无关；因此也是共享的
+3. 静态变量 虽然对于局部变量来说，它在代码中是“放”在某一函数中的，但是其存放位置和全局变量一样，存于堆中开辟的.bss和.data段，是共享的
+4. 文件等公用资源  这个是共享的，使用这些公共资源的线程必须同步。Win32 提供了几种同步资源的方式，包括信号、临界区、事件和互斥体。
+
+独享的资源有
+
+1. 栈 栈是独享的
+2. 寄存器  这个可能会误解，因为电脑的寄存器是物理的，每个线程去取值难道不一样吗？其实线程里存放的是副本，包括程序计数器PC
+
+线程共享的环境包括：进程代码段、进程的公有数据(利用这些共享的数据，线程很容易的实现相互之间的通讯)、进程打开的文件描述符、信号的处理器、
+进程的当前目录和进程用户ID与进程组ID。
+
+### 线程和进程各自有什么区别和优劣呢？
+
+* 进程是资源分配的基本单位，线程是程序执行（CPU调度）的基本单位。
+* 进程有自己的 **独立地址空间**，每启动一个进程，系统就会为它分配地址空间，建立数据表来维护代码段、堆栈段和数据段，这种操作非常昂贵。而线程是共享进程中的数据的，
+使用相同的地址空间，因此CPU切换一个线程的花费远比进程要小很多，同时创建一个线程的开销也比进程要小很多。
+* 线程之间的通信更方便，同一进程下的线程共享全局变量、静态变量等数据，而进程之间的通信需要以通信的方式（IPC)进行。不过如何处理好同步与互斥是编写多线程程序的难点。
+* 但是多进程程序更健壮。多线程环境中，父线程终止，全部子线程被迫终止(没有了资源)。而任何一个子线程终止一般不会影响其他线程，除非子线程执行了exit()系统调用。
+任何一个子线程执行exit()，全部线程同时灭亡；一个进程死掉并不会对另外一个进程造成影响，因为进程有自己独立的地址空间。
+
+《Unix网络编程》的原话是这么说的---：
+
+fork is expensive. Memory is copied from the parent to the child, all descriptors are duplicated in the child, and so on. 
+Current implementations use a technique called copy-on-write, which avoids a copy of the parent's data space to the child until 
+the child needs its own copy. But, regardless of this optimization, fork is expensive.
+
+IPC is required to pass information between the parent and child after the fork. Passing information from the parent to the child 
+before the fork is easy, since the child starts with a copy of the parent's data space and with a copy of all the parent's descriptors. 
+But, returning information from the child to the parent takes more work.
+
+Threads help with both problems. Threads are sometimes called lightweight processes since a thread is "lighter weight" than a process. 
+That is, thread creation can be 10–100 times faster than process creation.
+
+All threads within a process share the same global memory. This makes the sharing of information easy between the threads, 
+but along with this simplicity comes the problem
 
 ## 2 调度算法
 
