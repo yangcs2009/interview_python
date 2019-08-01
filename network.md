@@ -427,7 +427,7 @@ TCPBacklogDrop: 2334
 
 ## ping过程解析
 
-![topo.png](img/network/topo.png) 
+![topo.png](img/network/topo1.png) 
 
 在一个局域网中，计算机通信实际上是依赖于`MAC地址`进行通信的，那么ARP（Address Resolution Protocol）的作用就是根据IP地址查找出对应ip地址的MAC地址。
 ping命令是依托于ICMP协议的，ICMP协议的存在就是为了更高效的转发IP数据报和提高交付成功的机会。
