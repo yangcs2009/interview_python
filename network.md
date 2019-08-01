@@ -23,6 +23,9 @@
                 * [2.2 快重传和快恢复](#22-快重传和快恢复)
     * [25 理解TCP backlog](#25-理解tcp-backlog)
     * [3 ARP协议](#3-arp协议)
+    * [ping过程接卸](#ping过程接卸)
+        * [同一网段内](#同一网段内)
+        * [不同网段内](#不同网段内)
     * [4 urllib和urllib2的区别](#4-urllib和urllib2的区别)
     * [6 Cookie和Session](#6-cookie和session)
     * [7 apache和nginx的区别](#7-apache和nginx的区别)
@@ -421,6 +424,72 @@ TCPBacklogDrop: 2334
 4. 源主机收到ARP响应包后。将目的主机的IP和MAC地址写入ARP列表，并利用此信息发送数据。如果源主机一直没有收到ARP响应数据包，表示ARP查询失败。
 
 **广播发送ARP请求，单播发送ARP响应。**
+
+## ping过程接卸
+
+![topo.png](img/network/topo.png) 
+
+在一个局域网中，计算机通信实际上是依赖于`MAC地址`进行通信的，那么ARP（Address Resolution Protocol）的作用就是根据IP地址查找出对应ip地址的MAC地址。
+ping命令是依托于ICMP协议的，ICMP协议的存在就是为了更高效的转发IP数据报和提高交付成功的机会。
+
+在这里讲ping的两情况：一种是同一网段内，一种是跨网段的ping。
+
+### 同一网段内
+
+首先，如果主机A，要去ping主机B，那么主机A，就要封装二层报文，他会先查自己的MAC地址表，如果没有B的MAC地址，就会向外发送一个ARP广播包，如图: 
+
+![arp_request.png](img/network/arp_request.png) 
+
+其中ARP报文格式如下:
+
+![apr-1.png](img/network/apr-1.png) 
+
+其中OP 
+
+1：表示ARP请求 
+
+2：表示ARP应答 
+
+3：表示RARP请求 
+
+4：表示RARP应答
+
+首先，交换机会收到这个报文后，交换机有学习MAC地址的功能，所以他会检索自己有没有保存主机B的MAC地址，如果有，就返回给主机A，如果没有，就会向所有端口发送ARP广播，
+其它主机收到后，发现不是在找自己，就纷纷丢弃了该报文，不去理会。直到主机B收到了报文后，就立即响应，我的MAC地址是多少，同时学到主机A的MAC地址，并按同样的
+ARP报文格式返回给主机A。如图：
+
+![arp_reply.png](img/network/arp_reply.png) 
+
+ARP报文格式为：
+
+![apr-2.png](img/network/apr-2.png) 
+
+这时候主机A学到了主机B的MAC地址，就把这个MAC地址封装到ICMP协议的二层报文中向主机B发送，报文格式如下： 
+
+![ping-1.png](img/network/ping-1.png) 
+
+当主机B收到了这个报文后，发现是主机A 的ICPM回显请求，就按同样的格式，返回一个值给主机A，这样就完成了同一网段内的ping过程。
+
+![ping-2.png](img/network/ping-2.png) 
+
+在这里，讲了这么久的局域网内的PING，实际过程的发生不到1毫秒。
+
+### 不同网段内
+
+如果主机A要ping主机C，那么主机A发现主机C的IP和自己不是同一网段，他就去找网关转发，但是他也不知道网关的MAC地址情况下呢？他就会向之前那个步骤一样
+先发送一个ARP广播，学到网关的MAC地址，再发封装ICMP报文给网关路由器.。报文格式如下：
+
+![ping-3.png](img/network/ping-3.png) 
+
+当路由器收到主机A发过来的ICMP报文，发现自己的目的地址是其本身MAC地址，根据目的的IP2.1.1.1，查路由表，发现2.1.1.1/24的路由表项，得到一个出口指针，
+去掉原来的MAC头部，加上自己的MAC地址向主机C转发。(如果网关也没有主机C的MAC地址，还是要向前面一个步骤一样，ARP广播一下即可相互学到。路由器2端口
+能学到主机D的MAC地址，主机D也能学到路由器2端口的MAC地址。)报文格式如下：
+
+![ping-4.png](img/network/ping-4.png) 
+
+最后，在主机C已学到路由器2端口MAC地址，路由器2端口转发给路由器1端口，路由1端口学到主机A的MAC地址的情况下，他们就不需要再做ARP解析，就将ICMP的回显请求回复过来。报文格式大致如下: 
+
+![ping-5.png](img/network/ping-5.png) 
 
 ## 4 urllib和urllib2的区别
 这个面试官确实问过,当时答的urllib2可以Post而urllib不可以.
