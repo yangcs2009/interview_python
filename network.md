@@ -425,7 +425,7 @@ TCPBacklogDrop: 2334
 
 **广播发送ARP请求，单播发送ARP响应。**
 
-## ping过程接卸
+## ping过程解析
 
 ![topo.png](img/network/topo.png) 
 
