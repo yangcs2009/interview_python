@@ -43,6 +43,13 @@
     * [21 lambda函数](#21-lambda函数)
     * [22 Python函数式编程](#22-python函数式编程)
     * [23 Python里的拷贝](#23-python里的拷贝)
+    * [python内存分配](#python内存分配)
+        * [python内存分配层级](#python内存分配层级)
+        * [基本逻辑](#基本逻辑)
+        * [block](#block)
+            * [不同长度的block](#不同长度的block)
+        * [pool](#pool)
+        * [arena](#arena)
     * [24 Python垃圾回收机制](#24-python垃圾回收机制)
         * [1 引用计数](#1-引用计数)
         * [2 标记-清除机制](#2-标记-清除机制)
@@ -68,7 +75,8 @@
         * [包package](#包package)
             * [总结](#总结)
     * [37 wsgi](#37-wsgi)
-            * [什么是WSGI](#什么是wsgi)
+        * [什么是WSGI](#什么是wsgi)
+        * [几个关于WSGI相关的概念](#几个关于wsgi相关的概念)
     * [Django、Tornado和Flask框架](#djangotornado和flask框架)
     * [正向代理和反向代理](#正向代理和反向代理)
         * [区别](#区别)
@@ -1153,6 +1161,134 @@ b =  [1, 2, 3, 4, ['a', 'b', 'c'], 5]
 c =  [1, 2, 3, 4, ['a', 'b', 'c']]
 d =  [1, 2, 3, 4, ['a', 'b']]
 ```
+
+## python内存分配
+总的概括是`预分配，惰性释放`。小于512字节的内存使用预分配，大于512字节的使用malloc分配
+
+### python内存分配层级
+
+```
+   _____   ______   ______       ________
+   [ int ] [ dict ] [ list ] ... [ string ]       Python core         |
++3 | <----- Object-specific memory -----> | <-- Non-object memory --> |
+    _______________________________       |                           |
+   [   Python's object allocator   ]      |                           |
++2 | ####### Object memory ####### | <------ Internal buffers ------> |
+    ______________________________________________________________    |
+   [          Python's raw memory allocator (PyMem_ API)          ]   |
++1 | <----- Python memory (under PyMem manager's control) ------> |   |
+    __________________________________________________________________
+   [    Underlying general-purpose allocator (ex: C library malloc)   ]
+ 0 | <------ Virtual memory allocated for the python process -------> |
+
+   =========================================================================
+    _______________________________________________________________________
+   [                OS-specific Virtual Memory Manager (VMM)               ]
+-1 | <--- Kernel dynamic storage allocation & management (page-based) ---> |
+    __________________________________   __________________________________
+   [                                  ] [                                  ]
+-2 | <-- Physical memory: ROM/RAM --> | | <-- Secondary storage (swap) --> |
+```
+
+```
+layer 3: Object-specific memory(int/dict/list/string....)
+         Python 实现并维护
+         更高抽象层次的内存管理策略, 主要是各类特定对象的缓冲池机制. 具体见前面几篇涉及的内存分配机制
+
+layer 2: Python's object allocator
+         Python 实现并维护
+         实现了创建/销毁Python对象的接口(PyObject_New/Del), 涉及对象参数/引用计数等
+
+layer 1: Python's raw memory allocator (PyMem_ API)
+         Python 实现并维护, 包装了第0层的内存管理接口, 提供统一的raw memory管理接口
+         封装的原因: 不同操作系统 C 行为不一定一致, 保证可移植性, 相同语义相同行为
+
+layer 0: Underlying general-purpose allocator (ex: C library malloc)
+         操作系统提供的内存管理接口, 由操作系统实现并管理, Python不能干涉这一层的行为
+```
+ 
+layer 3几乎每种常用的数据类型都伴有一套缓冲池机制. 
+
+Python引入了`内存池机制`, 用于管理对小块内存的申请和释放
+
+### 基本逻辑
+
+1. 如果要分配的内存空间大于 SMALL_REQUEST_THRESHOLD bytes(512 bytes), 将直接使用layer 1的内存分配接口进行分配
+2. 否则, 使用不同的block来满足分配需求
+
+整个小块内存池可以视为一个层次结构
+
+1. 内存池(概念上的, 标识Python对于整个小块内存分配和释放的内存管理机制)
+2. arena
+3. pool
+4. block
+
+### block
+Python内存的最小单位, 所有block长度都是8字节对齐的
+
+注意这里block只是一个概念, 在源代码中并没有实体存在.
+
+不同类型block, 对应不同内存大小, 这个内存大小的值被称为size class.
+
+#### 不同长度的block
+
+| Request in bytes    | Size of allocated block    |  Size class idx|
+| :------------------:|:--------------------------:|:--------------:|
+|        1-8          |           8                |       0        |
+|        9-16         |          16                |       1        |
+|       17-24         |          24                |       2        |
+|       25-32         |          32                |       3        |
+|       33-40         |          40                |       4        |
+|       41-48         |          48                |       5        |
+|       49-56         |          56                |       6        |
+|       57-64         |          64                |       7        |
+|       65-72         |          72                |       8        |
+|        ...          |         ...                |     ...        |
+|      497-504        |         504                |      62        |
+|      505-512        |        512                 |      63        |
+
+
+### pool
+ 
+![pool.png](img/python/pool.png)
+ 
+### arena
+
+![arena.png](img/python/arena.png)
+
+arena: 多个pool聚合的结果
+
+arena size
+pool的大小默认值位4KB
+
+arena的大小默认值256KB, 能放置 256⁄4=64 个pool
+
+obmalloc.c中代码
+
+```
+#define ARENA_SIZE              (256 << 10)     /* 256KB */
+```
+
+arena 结构
+一个完整的arena = arena_object + pool集合 
+ 
+arena的两种状态
+arena存在两种状态: 未使用(没有建立联系)/可用(建立了联系)
+
+arena回收
+内存分配和回收最小单位是block, 当一个block被回收的时候, 可能触发pool被回收, pool被回收, 将会触发arena的回收机制
+
+四种情况
+
+1. arena中所有pool都是闲置的(empty), 将arena内存释放, 返回给操作系统
+2. 如果arena中之前所有的pool都是占用的(used), 现在释放了一个pool(empty), 需要将 arena加入到usable_arenas, 会加入链表表头
+3. 如果arena中empty的pool个数n, 则从useable_arenas开始寻找可以插入的位置. 将arena插入. (useable_arenas是一个有序链表, 按empty pool的个数, 
+保证empty pool数量越多, 被使用的几率越小, 最终被整体释放的机会越大)
+4. 其他情况, 不对arena 进行处理
+
+结论: 进行内存分配和销毁, 所有操作都是在pool上进行的
+
+![full_structure.png](img/python/full_structure.png)
 
 ## 24 Python垃圾回收机制
 
