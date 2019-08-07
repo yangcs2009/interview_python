@@ -192,7 +192,7 @@ b+树就不知道下一步该查哪个节点，因为建立搜索树的时候nam
 假设(col1, col2,col3)是一个多列索引联合索引，联合索引也是一棵B+Tree， **非叶子节点存储的是第一个关键字的索引，而叶节点存储的则是三个关键字**
 col1、col2、col3三个关键字的数据，且按照col1、col2、col3的顺序进行排序。
 
-![union_index.png](union_index.png)
+![union_index.png](img/database/union_index.png)
 
 如上图所示，col1表示的是年龄，col2表示的是姓氏，col3表示的是名字。  
 PS:对应地址指的是数据记录的地址。
