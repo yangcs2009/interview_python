@@ -21,6 +21,7 @@
                 * [synchronous IO和asynchronous IO的区别](#synchronous-io和asynchronous-io的区别)
         * [三 I/O 多路复用之select、poll、epoll详解](#三-io-多路复用之selectpollepoll详解)
             * [select](#select)
+                    * [Select实现过程](#select实现过程)
                 * [select缺点:](#select缺点)
             * [poll](#poll)
             * [epoll](#epoll)
@@ -28,7 +29,6 @@
                 * [二 工作模式](#二-工作模式)
                 * [三 代码演示](#三-代码演示)
                 * [四 epoll总结](#四-epoll总结)
-        * [参考](#参考)
     * [理解inode](#理解inode)
         * [inode是什么？](#inode是什么)
         * [inode的内容](#inode的内容)
@@ -236,26 +236,45 @@ block进程。但是，当kernel中数据准备好的时候，recvfrom会将数�
 
 [Tornado原理浅析](https://www.jiqizhixin.com/articles/2019-04-10-15)
 
-select，poll，epoll都是IO多路复用的机制。I/O多路复用就是通过一种机制，一个进程可以监视多个描述符，一旦某个描述符就绪
-（一般是读就绪或者写就绪），能够通知程序进行相应的读写操作。但`select，poll，epoll本质上都是同步I/O`，因为他们都需要在读写事件
+**select，poll，epoll都是IO多路复用的机制。I/O多路复用就是通过一种机制，一个进程可以监视多个文件描述符，一旦某个描述符就绪
+（一般是读就绪或者写就绪），能够通知程序进行相应的读写操作**。但`select，poll，epoll本质上都是同步I/O`，因为他们都需要在读写事件
 就绪后自己负责进行读写，也就是说这个读写过程是阻塞的，而异步I/O则无需自己负责进行读写，异步I/O的实现会负责把数据从内核拷贝到用户空间。
 
 #### select
 `int select (int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);`  
+
 select 函数监视的文件描述符分3类，分别是writefds、readfds、和exceptfds。调用后select函数会阻塞，直到有描述符就绪
 （有数据可读、可写、或者有except），或者超时（timeout指定等待时间，如果立即返回设为null即可），函数返回。当select函数返回后，
 可以通过遍历fdset，来找到就绪的描述符。
 
 ![select_flow.png](img/linux/select_flow.png)
 
+###### Select实现过程
+
+1. 首先fdset集合里需要监控的文件句柄由程序员来添加，当前连接需要监控哪些文件句柄，那么通过FD_SET宏来进行添加。
+
+2. 然后调用select()函数将fd_set从用户空间拷贝到内核空间。
+
+3. 注册一个回调函数。
+
+4. 内核对文件句柄进行监控。
+
+5. 当有满足可读写等条件时/超时调用回调函数并将文件句柄集合拷贝回用户空间。
+
+6. 应用通过轮询的方式查找所有文件句柄，用FD_ISSET宏来判读具体是哪个文件句柄可操作。
+
+7. 当再次有新连接处理需要监控，再次重复以上步骤往内核拷贝fdset。
+
+![select_process.jpg](img/linux/select_process.jpg)
+
 select目前几乎在所有的平台上支持，其良好`跨平台支持`也是它的一个优点。select的一个缺点在于`单个进程能够监视的文件描述符的数量存在最大限制`，
 在Linux上一般为1024，可以通过修改宏定义甚至重新编译内核的方式提升这一限制，但是这样也会造成效率的降低。
 
 ##### select缺点:
 
-1. select支持的文件描述符数量太小，默认1024，epoll无限制，所支持的FD上限是最大可以打开文件的数目，可查看`/proc/sys/fs/file-max`
-2. 查询效率低，每次调用select都需要在内核遍历传递进来的 **所有fd**，这个开销在fd很多时也很大
-3. 每次调用select，都需要把fd集合从用户态 **拷贝**到内核态，这个开销在fd很多时会很大
+1. **句柄上限** select支持的文件描述符数量太小，默认1024，epoll无限制，所支持的FD上限是最大可以打开文件的数目，可查看`/proc/sys/fs/file-max`
+2. **查询效率低** 每次调用select都需要在内核遍历传递进来的 **所有fd**，这个开销在fd很多时也很大
+3. **重复初始化** 每次调用select，都需要把fd集合从用户态 **拷贝**到内核态，这个开销在fd很多时会很大
 
 poll改善了第一个缺点
 
@@ -275,6 +294,8 @@ struct pollfd {
 
 pollfd结构包含了要监视的event和发生的event，不再使用select“参数-值”传递的方式。同时，pollfd并没有最大数量限制（但是数量过大后性能也是会下降）。 
 和select函数一样，poll返回后，需要轮询pollfd来获取就绪的描述符。
+
+poll技术与select 技术本质上是没有区别的，只是文件句柄的存储结构变更了，变成了 **链表**，所以没有了文件句柄的上限，但是其他缺点依旧存在。
 
 `从上面看，select和poll都需要在返回后，通过遍历文件描述符来获取已经就绪的socket。事实上，同时连接的大量客户端在一时刻可能只有
 很少的处于就绪状态，因此随着监视的描述符数量的增长，其效率也会线性下降。`
@@ -542,15 +563,8 @@ linux上面创建进程的代价比较小，但仍旧是不可忽视的，加上
 如果没有大量的idle-connection或者dead-connection，epoll的效率并不会比select/poll高很多，但是当遇到大量的
 idle-connection，就会发现epoll的效率大大高于select/poll。
 
-### 参考
-[用户空间与内核空间，进程上下文与中断上下文[总结]](http://www.cnblogs.com/Anker/p/3269106.html)  
-[进程切换](http://guojing.me/linux-kernel-architecture/posts/process-switch/)  
-[维基百科-文件描述符](https://zh.wikipedia.org/wiki/%E6%96%87%E4%BB%B6%E6%8F%8F%E8%BF%B0%E7%AC%A6)  
-[Linux 中直接 I/O 机制的介绍](https://www.ibm.com/developerworks/cn/linux/l-cn-directio/)  
-[IO - 同步，异步，阻塞，非阻塞 （亡羊补牢篇）](http://blog.csdn.net/historyasamirror/article/details/5778378)  
-[IO多路复用之select总结](http://www.cnblogs.com/Anker/archive/2013/08/14/3258674.html)  
-[IO多路复用之poll总结](http://www.cnblogs.com/Anker/archive/2013/08/15/3261006.html)  
-[IO多路复用之epoll总结](http://www.cnblogs.com/Anker/archive/2013/08/17/3263780.html)  
+3. 为了减少重复初始化过程中用户空间和内核空间发生不必要的拷贝带来的资源浪费，epoll技术提供了epoll_ctl函数，在用epoll_ctl函数进行事件注册的时候，
+会将文件句柄都复制到内核中，所以不用每次都复制一遍，当有新的文件句柄时采用的也是增量往内核拷贝，确保了每个文件句柄只会被拷贝一次。
 
 ## 理解inode
 
