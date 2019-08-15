@@ -21,6 +21,14 @@
             * [2.几种拥塞控制方法](#2几种拥塞控制方法)
                 * [2.1 慢开始和拥塞避免](#21-慢开始和拥塞避免)
                 * [2.2 快重传和快恢复](#22-快重传和快恢复)
+    * [TCP套接字](#tcp套接字)
+        * [socket()](#socket)
+        * [bind()](#bind)
+        * [listen()、connect()](#listenconnect)
+        * [accept()](#accept)
+        * [fork()、exec()](#forkexec)
+            * [fork（）](#fork)
+            * [exec( )函数族](#exec-函数族)
     * [25 理解TCP backlog](#25-理解tcp-backlog)
     * [3 ARP协议](#3-arp协议)
     * [ping过程解析](#ping过程解析)
@@ -339,15 +347,233 @@ cwnd 减小到1，并执行慢开始算法，同时把慢开始门限值ssthresh
 当rwnd < cwnd 时，是接收方的接收能力限制发送方窗口的最大值。  
 当cwnd < rwnd 时，则是网络的拥塞限制发送方窗口的最大值。  
 
+## TCP套接字
+
+[Linux Socket编程](https://www.cnblogs.com/skynet/archive/2010/12/12/1903949.html)
+
+![socket_lifecycle.png](img/network/socket_lifecycle.png)
+
+### socket()
+```
+#include<sys/socket.h>
+int socket(int domain, int type, int protocol);
+```
+
+socket()用于创建一个socket描述符（socket descriptor），它唯一标识一个socket。这个socket描述字跟文件描述字一样，后续的操作都有用到它，
+把它作为参数，通过它来进行一些读写操作。
+
+创建socket的时候可以指定不同的参数创建不同的socket描述符，socket函数的三个参数分别为：
+
+domain：即协议域，又称为协议族（family）。常用的协议族有，AF_INET、AF_INET6、AF_LOCAL（或称AF_UNIX，Unix域socket）、AF_ROUTE等等。
+协议族决定了socket的地址类型，在通信中必须采用对应的地址，如AF_INET决定了要用ipv4地址（32位的）与端口号（16位的）的组合、AF_UNIX决定了要
+用一个绝对路径名作为地址。
+
+domain的值及含义
+
+|名称	|含义	|
+|----   |----   |
+|AF_INET,PF_INET	|IPv4 Internet协议	|
+|AF_INET6,PF_INET6	|IPv6 Internet协议	|
+|AF_LOCAL	|Unix域协议	|
+|AF_ROUTE	|路由套接字	|
+AF_KEY	|秘钥套接字|
+
+type：指定socket类型。常用的socket类型有，SOCK_STREAM、SOCK_DGRAM、SOCK_RAW、SOCK_PACKET、SOCK_SEQPACKET等等。
+
+type的值及含义
+
+|名称	|含义
+|--     |--
+|SOCK_STREAM	|Tcp连接，提供序列化的、可靠的、双向连接的字节流。支持带外数据传输
+|SOCK_DGRAM	|支持UDP连接（无连接状态的消息）
+|SOCK_SEQPACKET	|序列化包，提供一个序列化的、可靠的、双向的基本连接的数据传输通道，数据长度定常。每次调用读系统调用时数据需要将全部数据读出
+|SOCK_RAW	|RAW类型，提供原始网络协议访问
+|SOCK_RDM	|提供可靠的数据报文，不过可能数据会有乱序
+|SOCK_PACKET	|这是一个专用类型，不能呢过在通用程序中使用
+
+protocol：故名思意，就是指定协议。常用的协议有，IPPROTO_TCP、IPPTOTO_UDP、IPPROTO_SCTP、IPPROTO_TIPC等，它们分别对应TCP传输协议、UDP传输协议、
+STCP传输协议、TIPC传输协议。函数socket()的第3个参数protocol用于制定某个协议的特定类型，即type类型中的某个类型。通常某协议中只有一种特定类型，
+这样protocol参数仅能设置为0；但是有些协议有多种特定的类型，就需要设置这个参数来选择特定的类型。
+
+注意：并不是上面的type和protocol可以随意组合的，如SOCK_STREAM不可以跟IPPROTO_UDP组合。当protocol为0时，会自动选择type类型对应的默认协议。
+
+当我们调用socket创建一个socket时，返回的socket描述字它存在于协议族（address family，AF_XXX）空间中，但没有一个具体的地址。
+如果想要给它赋值一个地址，就必须调用bind()函数，否则就当调用connect()、listen()时系统会自动随机分配一个端口。
+
+建立一个流式套接字：
+
+```
+int sock = socket(AF_INET, SOCK_STREAM, 0);
+```
+
+### bind()
+
+```
+#include<sys/socket.h>
+int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+```
+
+函数的三个参数分别为： 
+
+sockfd：即socket描述字，它是通过socket()函数创建了，唯一标识一个socket。bind()函数就是将给这个描述字绑定一个名字。
+
+addr：一个const struct sockaddr *指针，指向要绑定给sockfd的协议地址。这个地址结构根据地址创建socket时的地址协议族的不同而不同
+
+addrlen：对应的是地址的长度。
+
+通常服务器在启动的时候都会绑定一个众所周知的地址（如ip地址+端口号），用于提供服务，客户就可以通过它来接连服务器；而客户端就不用指定，
+由系统自动分配一个端口号和自身的ip地址组合。这就是为什么通常服务器端在listen之前会调用bind()，而客户端就不会调用，而是在connect()时由系统随机生成一个。
+
+### listen()、connect()
+如果作为一个服务器，在调用socket()、bind()之后就会调用listen()来监听这个socket，如果客户端这时调用connect()发出连接请求，服务器端就会接收到这个请求。
+
+```
+int listen(int sockfd, int backlog);
+int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+```
+
+listen函数的第一个参数即为要监听的socket描述字，第二个参数为相应socket可以排队的最大连接个数。socket()函数创建的socket默认是一个主动类型的，
+listen函数将socket变为被动类型的，等待客户的连接请求。
+
+![socket_queue.png](img/network/socket_queue.png)
+
+connect函数的第一个参数即为客户端的socket描述字，第二参数为服务器的socket地址，第三个参数为socket地址的长度。客户端通过调用connect函数来建立
+与TCP服务器的连接。
+
+![socket_connect.png](img/network/socket_connect.png)
+
+### accept()
+TCP服务器端依次调用socket()、bind()、listen()之后，就会监听指定的socket地址了。TCP客户端依次调用socket()、connect()之后向TCP服务器
+发送了一个连接请求。TCP服务器监听到这个请求之后，就会调用accept()函数取接收请求，这样连接就建立好了。之后就可以开始网络I/O操作了，
+即类同于普通文件的读写I/O操作。
+
+```
+int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+```
+
+accept函数的第一个参数为服务器的socket描述字，第二个参数为指向struct sockaddr *的指针，用于返回客户端的协议地址，第三个参数为协议地址的长度。
+如果accpet成功，那么其返回值是由内核自动生成的一个全新的描述字，代表与返回客户的TCP连接。
+
+注意：accept的第一个参数为服务器的socket描述字，是服务器开始调用socket()函数生成的，称为`监听socket描述字`；而accept函数返回的是已连接的
+socket描述字。一个服务器通常通常仅仅只创建一个监听socket描述字，它在该服务器的生命周期内一直存在。内核为每个由服务器进程接受的客户连接创建了
+一个已连接socket描述字，当服务器完成了对某个客户的服务，相应的已连接socket描述字就被关闭。
+
+### fork()、exec()
+
+在传统的Unix环境下，有两个基本的操作用于创建和修改进程： **函数fork( )用来创建一个新的进程，该进程几乎是当前进程的一个完全拷贝；函数族exec( )用来
+启动另外的进程以取代当前运行的进程**。Linux的进程控制和传统的Unix进程控制基本一致，只在一些细节的地方有些区别，例如在Linux系统中调用vfork和fork完全相同，
+而在有些版本的Unix系统中，vfork调用有不同的功能。由于这些差别几乎不影响我们大多数的编程，在这里我们不予考虑。
+
+#### fork（）
+
+```
+#include <unistd.h>
+
+pid_t fork(void);    # 返回：子进程返回0，父进程返回子进程ID，出错返回-1
+```
+
+fork在英文中是"分叉"的意思。为什么取这个名字呢？因为一个进程在运行中，如果使用了fork，就产生了另一个进程，于是进程就"分叉"了，所以这个名字取得很形象。
+下面就看看如何具体使用fork，这段程序演示了使用fork的基本框架：
+
+```
+ 1void main()
+ 2{
+ 3    int i;
+ 4    if ( fork() == 0 ) 
+ 5    {
+ 6       /* 子进程程序 */
+ 7       for ( i = 1; i <1000; i ++ ) 
+ 8          printf("This is child process\n");
+ 9    }
+10    else 
+11    {
+12       /* 父进程程序*/
+13       for ( i = 1; i <1000; i ++ ) 
+14       printf("This is process process\n");
+15    }
+16}
+```
+
+程序运行后，你就能看到屏幕上交替出现子进程与父进程各打印出的一千条信息了。如果程序还在运行中，你用ps命令就能看到系统中有两个它在运行了。
+
+那么调用这个fork函数时发生了什么呢？fork函数启动一个新的进程，前面我们说过，这个进程几乎是当前进程的一个拷贝： **子进程和父进程使用相同的代码段；
+子进程复制父进程的堆栈段和数据段**。  
+这样，父进程的所有数据都可以留给子进程，但是，子进程一旦开始运行，虽然它继承了父进程的一切数据，但实际上数据却已经分开，相互之间不再有影响了，
+也就是说，它们之间不再共享任何数据了。它们再要交互信息时，只有通过进程间通信来实现。  
+对于父进程， fork函数返回了子程序的进程号，而对于子程序，fork函数则返回零。在操作系统中，我们用ps函数就可以看到不同的进程号，
+对父进程而言，它的进程号是由比它更低层的系统调用赋予的，而对于子进程而言，它的进程号即是fork函数对父进程的返回值。在程序设计中，父进程和子进程都要
+调用函数fork()。
+
+**copy on write** 如果一个大程序在运行中，它的数据段和堆栈都很大，一次fork就要复制一次，那么fork的系统开销不是很大吗？其实UNIX自有其解决的办法，大家知道，一般CPU
+都是以"页"为单位来分配内存空间的，每一个页都是实际物理内存的一个映像，象INTEL的CPU，其一页在通常情况下是 4086字节大小，而无论是数据段还是堆栈段都是
+由许多"页"构成的，fork函数复制这两个段，只是"逻辑"上的，并非"物理"上的，也就是说，实际执行fork时，物理空间上两个进程的数据段和堆栈段都还是共享着的，
+当有一个进程写了某个数据时，这时两个进程之间的数据才有了区别，系统就将有区别的" 页"从物理上也分开。系统在空间上的开销就可以达到最小。
+
+下面演示一个足以"搞死"Linux的小程序，其源代码非常简单：
+
+```
+1void main()
+2{
+3   for( ; ; )
+4   {
+5     fork();
+6   }
+7}
+```
+
+这个程序什么也不做，就是死循环地fork，其结果是程序不断产生进程，而这些进程又不断产生新的进程，很快，系统的进程就满了，系统就被这么多不断产生的
+进程"撑死了"。当然只要系统管理员预先给每个用户设置可运行的最大进程数，这个恶意的程序就完成不了企图了。
+
+#### exec( )函数族
+
+下面我们来看看一个进程如何来启动另一个程序的执行。在Linux中要使用exec函数族。系统调用execve（）对当前进程进行替换，替换者为一个指定的程序，
+其参数包括文件名（filename）、参数列表（argv）以及环境变量（envp）。exec函数族当然不止一个，但它们大致相同，在 Linux中，
+它们分别是： **execl，execlp，execle，execv，execve和execvp**，下面以execlp为例，其它函数究竟与execlp有何区别，请通过man exec命令来了解它们的具体情况。
+
+一个进程一旦调用exec类函数，它本身就"死亡"了，系统把代码段替换成新的程序的代码，废弃原有的数据段和堆栈段，并为新程序分配新的数据段与堆栈段，唯一留下的，
+就是进程号，也就是说，对系统而言， **还是同一个进程**，不过已经是另一个程序了。（不过exec类函数中有的还允许继承环境变量之类的信息。）
+
+那么如果程序想启动另一程序的执行但自己仍想继续运行的话，怎么办呢？那就是结合fork与exec的使用。下面一段代码显示如何启动运行其它程序：
+
+```
+ 1#include <errno.h>
+ 2#include <stdio.h>
+ 3#include <stdlib.h>
+ 4
+ 5char command[256];
+ 6void main()
+ 7{
+ 8   int rtn; /*子进程的返回数值*/
+ 9   while(1) {
+10       /* 从终端读取要执行的命令 */
+11       printf( ">" );
+12       fgets( command, 256, stdin );
+13       command[strlen(command)-1] = 0;
+14       if ( fork() == 0 ) {/* 子进程执行此命令 */
+15          execlp( command, NULL );
+16          /* 如果exec函数返回，表明没有正常执行命令，打印错误信息*/
+17          perror( command );
+18          exit( errno );
+19       }
+20       else {/* 父进程， 等待子进程结束，并打印子进程的返回值 */
+21          wait ( &rtn );
+22          printf( " child process return %d\n", rtn );
+23       }
+24   }
+25}
+```
+
+此程序从终端读入命令并执行之，执行完成后，父进程继续等待从终端读入命令。
+
 ## 25 理解TCP backlog
 TCP建立连接是要进行三次握手，但是否完成三次握手后，服务器就处理（accept）呢？  
 　　客户端connect()返回不代表TCP连接建立成功，有可能此时服务器accept queue已满,OS会直接丢弃后续ACK请求；  
 　　客户端以为连接已建立，开始后续调用(譬如send)等待直至超时；  
 服务器则等待ACK超时，会重传SYN k, ACK J+1给客户端(重传次数受限net.ipv4.tcp_synack_retries)；  
 
-注：accept queue溢出，即便SYN queue没有溢出，新连接请求的SYN也可能被drop
-　　backlog其实是一个连接队列，在linux 2.2以前，backlog大小包括了半连接状态和全连接状态两种队列大小。  
-　　半连接状态为：服务器处于Listen状态时收到客户端SYN报文时放入半连接队列中，即SYN queue（服务器端口状态为：SYN_RCVD）。  
+注：accept queue溢出，即便SYN queue没有溢出，新连接请求的SYN也可能被drop  
+　　backlog其实是一个连接队列，在linux 2.2以前，backlog大小包括了半连接状态和全连接状态两种队列大小。    
+　　半连接状态为：服务器处于Listen状态时收到客户端SYN报文时放入半连接队列中，即SYN queue（服务器端口状态为：SYN_RCVD）。    
 　　全连接状态为：TCP的连接状态从服务器（SYN+ACK）响应客户端后，到客户端的ACK报文到达服务器之前，则一直保留在半连接状态中；当服务器接收到客户端的ACK报文后，
 该条目将从半连接队列搬到全连接队列尾部，即 accept queue （服务器端口状态为：ESTABLISHED）。
 
@@ -364,30 +590,35 @@ net.core.somaxconn = 128 。
 
 在How TCP backlog works in linux一文中，作者给出了比较详细的分析：  
 　　第一种实现 方式在底层维护一个由backlog指定大小的队列。服务端收到SYN后，返回一个SYN/ACK，并把连接放入队列中，此时这个连接的状态是SYN_RECEIVED。
-当客户端返回ACK后，此连接的状态变为ESTABLISHED。队列中只有ESTABLISHED状态的连接能够交由应用处理。第一种实现方式可以简单概括为：一个队列，两种状态。  
+当客户端返回ACK后，此连接的状态变为ESTABLISHED。队列中只有ESTABLISHED状态的连接能够交由应用处理。第一种实现方式可以简单概括为：一个队列，两种状态。 
+ 
 　　第二种实现 方式在底层维护一个SYN_RECEIVED队列和一个ESTABLISHED队列，当SYN_RECEIVED队列中的连接返回ACK后，将被移动到ESTABLISHED队列中。
 backlog指的是ESTABLISHED队列的大小。
 　　
 　　传统的基于BSD的tcp实现第一种方式，在linux2.2之前，内核也实现第一种方式。当队列满了以后，服务端再收到SYN时，将不会返回SYN/ACK。比较优雅的处理方法
-就是不处理这条连接，不返回RST，让客户端重试。
+就是不处理这条连接，不返回RST，让客户端重试。  
 　　在linux2.2后，选择第二种方式实现，SYN_RECEIVED队列的大小由proc/sys/net/ipv4/tcp_max_syn_backlog系统参数指定，ESTABLISHED队列由backlog和
-/proc/sys/net/core/somaxconn中较小的指定。  
+/proc/sys/net/core/somaxconn中较小的指定。    
 　　但是在windows server中，底层选择winsock API实现，backlog的定义是represents the maximum length of the queue of pending connections 
 for the listener(这是一个比较模糊的定义……来源于BSD)，当队列满了后，将会返回RST。
 
 　　考虑这样一种情况，当ESTABLISHED队列满了，此时收到一个连接的ACK，需要将此连接从SYN队列移到ESTABLISHED队列中，会发生什么？
 linux底层的关键代码是:
 
+```
 listen_overflow:
 	if (!sysctl_tcp_abort_on_overflow) {
 		inet_rsk(req)->acked = 1;
 		return NULL;
 	}
+```
+	
 　　除非系统的tcp_abort_on_overflow指定为1（将返回RST），否则底层将不会做任何事情……这是一种委婉的退让策略，在服务端处理不过来时，让客户端误以为ACK丢失，
 继续重新发送ACK。这样，当服务端的处理能力恢复时，这条连接又可以重新被移动到ESTABLISHED队列中去。  
 
 可以通过ss命令来显示
 
+```
 [root@localhost ~]# ss -l
 State       Recv-Q Send-Q     Local Address:Port      Peer Address:Port     
 LISTEN      129    128        *:http                  *:*       
@@ -395,6 +626,8 @@ LISTEN      0      128        :::ssh                  :::*
 LISTEN      0      128        *:ssh                   *:*       
 LISTEN      0      100        ::1:smtp                :::*       
 LISTEN      0      100        127.0.0.1:smtp          *:*
+```
+
 　　在LISTEN状态，其中 Send-Q 即为Accept queue的最大值，Recv-Q 则表示Accept queue中等待被服务器accept()。  
 　　按照前面的理解，这个时候我们能看到有个端口上的服务全连接队列最大是128，但是现在有129个在队列中和等待进队列的，肯定有一个连接进不去队列要overflow掉  
 
@@ -405,6 +638,7 @@ LISTEN      0      100        127.0.0.1:smtp          *:*
 查看SYN queue 溢出
 　　比如下面看到的 667399 times ，表示全连接队列溢出的次数，隔几秒钟执行下，如果这个数字一直在增加的话肯定全连接队列偶尔满了。
 
+```
 [root@localhost ~]# netstat -s | egrep "listen|LISTEN" 
 667399 times the listen queue of a socket overflowed
 667399 SYNs to LISTEN sockets ignored
@@ -413,6 +647,7 @@ LISTEN      0      100        127.0.0.1:smtp          *:*
 
 [root@localhost ~]# netstat -s | grep TCPBacklogDrop
 TCPBacklogDrop: 2334
+```
 
 ## 3 ARP协议
 
