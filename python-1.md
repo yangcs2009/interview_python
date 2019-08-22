@@ -115,6 +115,27 @@ new_list = list(set(old_list))
 #翻转一个字符串    
 s = 'abcde'    
 ss = s[::-1]    
+
+list初始化n个相同值两种方式）
+>>> lst = ['x' for n in range(5)]
+>>> print(lst)
+['x', 'x', 'x', 'x', 'x']
+>>> lst = ['z']*5
+>>> print(lst)
+['z', 'z', 'z', 'z', 'z']
+>>> lst = [0]*3
+>>> print(lst)
+[0, 0, 0]
+
+dict初始化
+>>> # 示例一:
+>>> D = {k:0 for k in 'ab'}
+>>> D
+{'a': 0, 'b': 0}
+>>> # 示例二:
+>>> D = {k:v for (k,v) in zip(['a', 'b'], [1, 2])}
+>>> D
+{'a': 1, 'b': 2}
     
 #用两个元素之间有对应关系的list构造一个dict    
 names = ['jianpx', 'yue']    
