@@ -421,7 +421,7 @@ BloomFilter中不允许有删除操作，因为删除后，可能会造成原来
 * Set：赞、踩、标签、好友关系
 * Zset：排行榜、延时队列
 
-![Redis延迟队列](https://medium.com/@cheukfung/redis%E5%BB%B6%E8%BF%9F%E9%98%9F%E5%88%97-c940850a264f)  
+[Redis延迟队列](https://medium.com/@cheukfung/redis%E5%BB%B6%E8%BF%9F%E9%98%9F%E5%88%97-c940850a264f)  
 利用Redis的有序集合，member为JobId， score为任务执行的时间戳，每秒扫描一次集合，取出执行时间小于等于当前时间的任务。 RANGEBYSCORE和ZREM
 
 * 在主页中显示最新的项目列表：Redis使用的是常驻内存的缓存，速度非常快。LPUSH用来插入一个内容ID，作为关键字存储在列表头部。LTRIM用来限制列表中
