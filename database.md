@@ -29,6 +29,7 @@
             * [Redis内存管理](#redis内存管理)
             * [Redis内部数据结构](#redis内部数据结构)
                 * [SDS](#sds)
+                * [BloomFilter原理，实现及优化](#bloomfilter原理实现及优化)
             * [6种的数据淘汰策略](#6种的数据淘汰策略)
             * [应用场景](#应用场景)
             * [单线程的redis为什么这么快](#单线程的redis为什么这么快)
@@ -381,6 +382,27 @@ chunk供下次有适合大小item时使用，当我们用完这所有的5242个c
 
 ##### SDS
 ![sds](img/database/sds.png)
+
+
+##### BloomFilter原理，实现及优化
+
+[BloomFilter原理，实现及优化](http://oserror.com/backend/bloomfilter/)
+
+空间效率高的概率型数据结构，用来检查一个元素是否在一个集合中  
+对于一个元素检测是否存在的调用，BloomFilter会告诉调用者两个结果之一： **可能存在或者一定不存在**
+
+原理  
+BloomFilter通常采用bit array实现，假设其bit总数为m，初始化时m个bit都被置成0。
+
+BloomFilter中插入一个元素，会使用k个hash函数，来计算出k个在bit array中的位置，然后，将bit array中这些位置的bit都置为1。
+
+![bloom_filter_insert.png](img/database/bloom_filter_insert.png)
+
+如上图，插入了两个元素，X和Y，X的两次hash取模后的值分别为4,9，因此，4和9位被置成1；Y的两次hash取模后的值分别为14和19，因此，14和19位被置成1。
+
+BloomFilter中查找一个元素，会使用和插入过程中相同的k个hash函数，取模后，取出每个bit对应的值，如果所有bit都为1，则返回元素可能存在，否则，返回元素不存在。
+
+BloomFilter中不允许有删除操作，因为删除后，可能会造成原来存在的元素返回不存在
 
 #### 6种的数据淘汰策略
 1. volatile-lru：从已设置过期时间的数据集（server.db[i].expires）中挑选最近最少使用的数据淘汰；
