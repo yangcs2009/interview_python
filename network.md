@@ -1013,12 +1013,15 @@ Date:生成响应的日期和时间；Content-Type:指定了MIME类型的HTML(te
 常见状态码：
 
 200 OK                        //客户端请求成功
+301	Moved Permanently	      //永久移动。请求的资源已被永久的移动到新URI，返回信息会包括新的URI，浏览器会自动定向到新URI。今后任何新的请求都应使用新的URI代替
+302	Temporary Redirect/Found  //临时移动。与301类似。但资源只是临时被移动。客户端应继续使用原有URI
 400 Bad Request               //客户端请求有语法错误，不能被服务器所理解
 401 Unauthorized              //请求未经授权，这个状态代码必须和WWW-Authenticate报头域一起使用 
 403 Forbidden                 //服务器收到请求，但是拒绝提供服务
 404 Not Found                 //请求资源不存在，eg：输入了错误的URL
 500 Internal Server Error     //服务器发生不可预期的错误
-503 Server Unavailable        //服务器当前不能处理客户端的请求，一段时间后可能恢复正常
+503 Server Unavailable        //临时的服务器维护/过载，服务器当前不能处理客户端的请求，一段时间后可能恢复正常
+504	Gateway Time-out	      //请求超时 充当网关或代理的服务器，未及时从远端服务器获取请求(nginx或者后端配置不正确)
 ```  
 [更多状态码](http://www.runoob.com/http/http-status-codes.html)
 
