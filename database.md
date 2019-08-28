@@ -430,7 +430,8 @@ BloomFilter中不允许有删除操作，因为删除后，可能会造成原来
 
 分布式锁的几种实现：
 
-**1.zookeeper分布式锁，基于自增节点**
+**1.zookeeper分布式锁，基于自增节点
+
 1)、实现原理  
 基于zookeeper临时顺序节点实现分布式锁，其大致思想为：  
 （a）每个客户端对某个功能加锁时，在zookeeper上的与该功能对应的指定节点的目录下，生成一个唯一的临时顺序节点；  
@@ -455,6 +456,8 @@ curator开源库中提供了分布式锁的实现，python库Kazoo中也可直�
 利用redis中的set命令来实现分布式锁。
 
 从 Redis 2.6.12 版本开始，set可以使用下列参数：  
+
+```
 SET KEY VALUE [EX seconds] [PX milliseconds] [NX|XX]
 
   EX second ：设置键的过期时间为 second 秒。 SET key value EX second 效果等同于 SETEX key second value 。
@@ -465,13 +468,14 @@ SET KEY VALUE [EX seconds] [PX milliseconds] [NX|XX]
 返回值：
   SET 在设置操作成功完成时，才返回 OK 。
   如果设置了 NX 或者 XX ，但因为条件没达到而造成设置操作未执行，那么命令返回空批量回复（NULL Bulk Reply）。
+```
 
 命令：
 > SET key value EX ttl NX
 
 大致思想是：
-（a）SET lock currentTime+expireTime EX 600 NX，使用set设置lock值，并设置过期时间为600秒，如果成功，则获取锁；
-（b）获取锁后，如果该节点掉线，则到过期时间ock值自动失效；
+（a）SET lock currentTime+expireTime EX 600 NX，使用set设置lock值，并设置过期时间为600秒，如果成功，则获取锁；  
+（b）获取锁后，如果该节点掉线，则到过期时间ock值自动失效；  
 （c）释放锁时，使用del删除lock键值；
 
 使用redis单机来做分布式锁服务，可能会出现单点问题，导致服务可用性差，因此在服务稳定性要求高的场合，官方建议使用redis集群（例如5台，
@@ -500,6 +504,8 @@ add和set的区别在于：如果多线程并发set，则每个set都会成功�
 3)、缺点  
 （1）memcached采用列入LRU置换策略，所以如果内存不够，可能导致缓存中的锁信息丢失。  
 （2）memcached无法持久化，一旦重启，将导致信息丢失。
+
+#### 常见场景
 
 * 在主页中显示最新的项目列表：Redis使用的是常驻内存的缓存，速度非常快。LPUSH用来插入一个内容ID，作为关键字存储在列表头部。LTRIM用来限制列表中
 的项目数最多为5000。如果用户需要的检索的数据量超越这个缓存容量，这时才需要把请求发送到数据库。  
