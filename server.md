@@ -1,5 +1,17 @@
 
+<!-- vim-markdown-toc GFM -->
 
+* [负载均衡算法及主流算法](#负载均衡算法及主流算法)
+    * [负载均衡](#负载均衡)
+    * [负载均衡算法](#负载均衡算法)
+        * [随机（Random）法](#随机random法)
+        * [加权随机（Weight Random）法](#加权随机weight-random法)
+        * [轮询（Round Robin）法](#轮询round-robin法)
+        * [加权轮询（Weight Round Robin）法](#加权轮询weight-round-robin法)
+        * [源地址哈希（Hash）法](#源地址哈希hash法)
+        * [最小连接数（Least Connections）法](#最小连接数least-connections法)
+
+<!-- vim-markdown-toc -->
 # 负载均衡算法及主流算法
 
 [负载均衡算法及手段](https://segmentfault.com/a/1190000004492447#articleHeader12)  
