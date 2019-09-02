@@ -16,6 +16,11 @@
         * [加权轮询（Weight Round Robin）法](#加权轮询weight-round-robin法)
         * [源地址哈希（Hash）法](#源地址哈希hash法)
         * [最小连接数（Least Connections）法](#最小连接数least-connections法)
+* [Nginx](#nginx)
+    * [概述](#概述)
+    * [Nginx特点](#nginx特点)
+    * [Nginx工作模式](#nginx工作模式)
+    * [Nginx参数配置demo](#nginx参数配置demo)
 * [Nginx流量控制](#nginx流量控制)
     * [限流算法](#限流算法)
         * [令牌桶算法](#令牌桶算法)
@@ -120,6 +125,229 @@
 以后端服务器的视角来观察系统的负载，而非请求发起方来观察。
 
 根据后端服务器当前的连接情况，动态地选取其中当前积压连接数最少的一台服务器来处理当前请求，尽可能地提高后端服务器的利用效率，将负载合理地分流到每一台机器
+
+# Nginx
+
+[8分钟带你深入浅出搞懂Nginx](https://zhuanlan.zhihu.com/p/34943332)
+
+[Nginx详解-服务器集群](https://www.cnblogs.com/jiekzou/p/4486447.html)
+
+![nginx_arch.jpg](img/server/nginx_arch.jpg)
+
+## 概述
+Nginx（发音同engine x）是异步框架的网页服务器，也可以用作反向代理、负载平衡器和HTTP缓存。该软件由伊戈尔·赛索耶夫创建并于2004年首次公开发布。
+由于它的内存占用少，启动极快，高并发能力强，在互联网项目中广泛应用。
+
+## Nginx特点
+
+* 跨平台：Nginx 可以在大多数 Unix like OS编译运行，而且也有Windows的移植版本。
+* 配置异常简单：非常容易上手。
+* 非阻塞、高并发连接：数据复制时，磁盘I/O的第一阶段是非阻塞的。官方测试能够支撑5万并发连接，在实际生产环境中跑到2～3万并发连接数.(这得益于Nginx使用了最新的epoll模型)
+* 事件驱动：通信机制采用epoll模型，支持更大的并发连接。
+
+* nginx代理和后端web服务器间无需长连接；
+* 接收用户请求是异步的，即先将用户请求全部接收下来，再一次性发送后后端web服务器，极大的减轻后端web服务器的压力
+* 发送响应报文时，是边接收来自后端web服务器的数据，边发送给客户端的
+* 网络依赖型低。NGINX对网络的依赖程度非常低，理论上讲，只要能够ping通就可以实施负载均衡，而且可以有效区分内网和外网流量
+* 支持服务器检测。NGINX能够根据应用服务器处理页面返回的状态码、超时信息等检测服务器是否出现故障，并及时返回错误的请求重新提交到其它节点上
+
+## Nginx工作模式
+
+![nginx_process.png](img/server/nginx_process.png)
+
+nginx是以多进程的方式来工作的，当然nginx也是支持多线程的方式的,只是我们主流的方式还是多进程的方式，也是nginx的默认方式。nginx采用多进程的方式有诸多好处。
+
+1. nginx在启动后，会有一个master进程和多个worker进程。master进程主要用来管理worker进程，包含：接收来自外界的信号，向各worker进程发送信号，
+监控 worker进程的运行状态,当worker进程退出后(异常情况下)，会自动重新启动新的worker进程。而基本的网络事件，则是放在worker进程中来处理了。
+多个worker进程之间是对等的，他们同等竞争来自客户端的请求，各进程互相之间是独立的 。一个请求，只可能在一个worker进程中处理，一个worker进程，
+不可能处理其它进程的请求。 worker进程的个数是可以设置的，一般我们会设置与机器cpu核数一致，这里面的原因与nginx的进程模型以及事件处理模型是分不开的。
+
+2. Master接收到信号以后怎样进行处理（./nginx -s reload ）?首先master进程在接到信号后，会先重新加载配置文件，然后再启动新的进程，
+并向所有老的进程发送信号，告诉他们可以光荣退休了。新的进程在启动后，就开始接收新的请求，而老的进程在收到来自master的信号后，就不再接收新的请求，
+并且在当前进程中的所有未处理完的请求处理完成后，再退出。
+
+3. worker进程又是如何处理请求的呢？我们前面有提到，worker进程之间是平等的，每个进程，处理请求的机会也是一样的。当我们提供80端口的http服务时，
+一个连接请求过来，每个进程都有可能处理这个连接，怎么做到的呢？首先，每个worker进程都是从master进程fork过来，在master进程里面，先建立好需要
+listen的socket之后，然后再fork出多个worker进程，这样每个worker进程都可以去accept这个socket(当然不是同一个socket，只是每个进程的这个
+socket会监控在同一个ip地址与端口，这个在网络协议里面是允许的)。一般来说，当一个连接进来后，所有在accept在这个socket上面的进程，都会收到通知，
+而只有一个进程可以accept这个连接，其它的则accept失败，这是所谓的惊群现象。当然，nginx也不会视而不见，所以nginx提供了一个accept_mutex这个东西，
+从名字上，我们可以看这是一个加在accept上的一把共享锁。有了这把锁之后，同一时刻，就只会有一个进程在accpet连接，这样就不会有惊群问题了。
+accept_mutex是一个可控选项，我们可以显示地关掉，默认是打开的。当一个worker进程在accept这个连接之后，就开始读取请求，解析请求，处理请求，产生数据后，
+再返回给客户端，最后才断开连接，这样一个完整的请求就是这样的了。我们可以看到，一个请求，完全由worker进程来处理，而且只在一个worker进程中处理。
+
+4. nginx采用这种进程模型有什么好处呢？采用独立的进程，可以互相之间不会影响，一个进程退出后，其它进程还在工作，服务不会中断，master进程则很快
+重新启动新的worker进程。当然，worker进程的异常退出，肯定是程序有bug了，异常退出，会导致当前worker上的所有请求失败，不过不会影响到所有请求，
+所以降低了风险。当然，好处还有很多，大家可以慢慢体会。
+
+5. 有人可能要问了，nginx采用多worker的方式来处理请求，每个worker里面只有一个主线程，那能够处理的并发数很有限啊，多少个worker就能处理多少个并发，
+何来高并发呢？非也，这就是nginx的高明之处，nginx采用了异步非阻塞的方式来处理请求，也就是说，nginx是可以同时处理成千上万个请求的 .
+我们之前说过，推荐设置worker的个数为cpu的核数，在这里就很容易理解了，更多的worker数，只会导致进程来竞争cpu资源了，从而带来不必要的上下文切换。
+而且，nginx为了更好的利用多核特性，提供了cpu亲缘性的绑定选项，我们可以将某一个进程绑定在某一个核上，这样就不会因为进程的切换带来cache的失效。
+ 
+ 
+
+## Nginx参数配置demo
+
+```
+#定义Nginx运行的用户和用户组        
+    user www www;              
+    #nginx进程数，建议设置为等于CPU总核心数。        
+    worker_processes 8;        
+      
+    #全局错误日志定义类型，[ debug | info | notice | warn | error | crit ]  
+      
+    error_log ar/loginx/error.log info;  
+             
+    #进程文件  
+      
+    pid ar/runinx.pid;        
+       
+    #一个nginx进程打开的最多文件描述符数目，理论值应该是最多打开文件数（系统的值ulimit -n）与nginx进程数相除，但是nginx分配请求并不均匀，  
+    所以建议与ulimit -n的值保持一致。  
+      
+    worker_rlimit_nofile 65535;               
+      
+    #工作模式与连接数上限        
+    events        
+    {        
+    #参考事件模型，use [ kqueue | rtsig | epoll | /dev/poll | select | poll ]; epoll模型是Linux 2.6以上版本内核中的高性能网络I/O模型，  
+    如果跑在FreeBSD上面，就用kqueue模型。  
+      
+    use epoll;        
+    #单个进程最大连接数（最大连接数=连接数*进程数）       
+    worker_connections 65535;        
+    }  
+             
+    #设定http服务器        
+    http        
+    {        
+    include mime.types; #文件扩展名与文件类型映射表       
+    default_type application/octet-stream; #默认文件类型        
+    #charset utf-8; #默认编码        
+    server_names_hash_bucket_size 128; #服务器名字的hash表大小        
+    client_header_buffer_size 32k; #上传文件大小限制        
+    large_client_header_buffers 4 64k; #设定请求缓冲       
+    client_max_body_size 8m; #设定请求缓冲        
+    sendfile on; #开启高效文件传输模式，sendfile指令指定nginx是否调用sendfile函数（zero copy 方式）来输出文件，对于普通应用设为 on，如果用来进行下载等应用磁盘IO重负载应用，  
+    可设置为off，以平衡磁盘与网络I/O处理速度，降低系统的负载。注意：如果图片显示不正常把这个改成off。        
+    autoindex on; #开启目录列表访问，合适下载服务器，默认关闭。        
+    tcp_nopush on; #防止网络阻塞        
+    tcp_nodelay on; #防止网络阻塞        
+    keepalive_timeout 120; #长连接超时时间，单位是秒       
+            
+    #FastCGI相关参数是为了改善网站的性能：减少资源占用，提高访问速度。下面参数看字面意思都能理解。        
+    fastcgi_connect_timeout 300;        
+    fastcgi_send_timeout 300;        
+    fastcgi_read_timeout 300;        
+    fastcgi_buffer_size 64k;        
+    fastcgi_buffers 4 64k;        
+    fastcgi_busy_buffers_size 128k;        
+    fastcgi_temp_file_write_size 128k;         
+      
+    #gzip模块设置        
+    gzip on; #开启gzip压缩输出        
+    gzip_min_length 1k; #最小压缩文件大小        
+    gzip_buffers 4 16k; #压缩缓冲区        
+    gzip_http_version 1.0; #压缩版本（默认1.1，前端如果是squid2.5请使用1.0）        
+    gzip_comp_level 2; #压缩等级        
+    gzip_types text/plain application/x-javascript text/css application/xml;  
+      
+    #压缩类型，默认就已经包含textml，所以下面就不用再写了，写上去也不会有问题，但是会有一个warn。        
+    gzip_vary on;        
+    #limit_zone crawler $binary_remote_addr 10m; #开启限制IP连接数的时候需要使用        
+       
+      
+    upstream blog.ha97.com {        
+    #upstream的负载均衡，weight是权重，可以根据机器配置定义权重。weigth参数表示权值，权值越高被分配到的几率越大。        
+    server 192.168.80.121:80 weight=3;        
+    server 192.168.80.122:80 weight=2;        
+    server 192.168.80.123:80 weight=3;        
+    }               
+      
+    #虚拟主机的配置        
+    server       
+    {        
+    #监听端口        
+    listen 80;        
+    #域名可以有多个，用空格隔开        
+    server_name www.ha97.com ha97.com;       
+    index index.html index.htm index.php;        
+    root /data/www/ha97;        
+    location ~ .*.(php|php5)?$        
+    {        
+    fastcgi_pass 127.0.0.1:9000;        
+    fastcgi_index index.php;        
+    include fastcgi.conf;        
+    }        
+    #图片缓存时间设置        
+    location ~ .*.(gif|jpg|jpeg|png|bmp|swf)$        
+    {        
+    expires 10d;        
+    }        
+    #JS和CSS缓存时间设置        
+    location ~ .*.(js|css)?$        
+    {        
+    expires 1h;        
+    }        
+    #日志格式设定        
+    log_format access '$remote_addr - $remote_user [$time_local] "$request" '        
+    '$status $body_bytes_sent "$http_referer" '        
+    '"$http_user_agent" $http_x_forwarded_for';  
+      
+    #定义本虚拟主机的访问日志       
+    access_log ar/loginx/ha97access.log access;               
+      
+    #对 "/" 启用反向代理        
+    location / {        
+    proxy_pass http://127.0.0.1:88;        
+    proxy_redirect off;        
+    proxy_set_header X-Real-IP $remote_addr;  
+      
+    #后端的Web服务器可以通过X-Forwarded-For获取用户真实IP        
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;  
+      
+    #以下是一些反向代理的配置，可选。  
+      
+    proxy_set_header Host $host;        
+    client_max_body_size 10m; #允许客户端请求的最大单文件字节数        
+    client_body_buffer_size 128k; #缓冲区代理缓冲用户端请求的最大字节数，        
+    proxy_connect_timeout 90; #nginx跟后端服务器连接超时时间(代理连接超时)        
+    proxy_send_timeout 90; #后端服务器数据回传时间(代理发送超时)        
+    proxy_read_timeout 90; #连接成功后，后端服务器响应时间(代理接收超时)        
+    proxy_buffer_size 4k; #设置代理服务器（nginx）保存用户头信息的缓冲区大小        
+    proxy_buffers 4 32k; #proxy_buffers缓冲区，网页平均在32k以下的设置        
+    proxy_busy_buffers_size 64k; #高负荷下缓冲大小（proxy_buffers*2）        
+    proxy_temp_file_write_size 64k;  
+      
+    #设定缓存文件夹大小，大于这个值，将从upstream服务器传        
+    }  
+                 
+    #设定查看Nginx状态的地址        
+    location /NginxStatus {        
+    stub_status on;        
+    access_log on;        
+    auth_basic "NginxStatus";        
+    auth_basic_user_file confpasswd;        
+    #htpasswd文件的内容可以用apache提供的htpasswd工具来产生。        
+    }  
+                   
+    #本地动静分离反向代理配置        
+    #所有jsp的页面均交由tomcat或resin处理        
+    location ~ .(jsp|jspx|do)?$ {        
+    proxy_set_header Host $host;        
+    proxy_set_header X-Real-IP $remote_addr;        
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;        
+    proxy_pass http://127.0.0.1:8080;        
+    }  
+      
+    #所有静态文件由nginx直接读取不经过tomcat或resin        
+    location ~ .*.(htm|html|gif|jpg|jpeg|png|bmp|swf|ioc|rar|zip|txt|flv|mid|doc|ppt|pdf|xls|mp3|wma)$        
+    { expires 15d; }        
+    location ~ .*.(js|css)?$        
+    { expires 1h; }        
+    }        
+    }
+```   
 
 # Nginx流量控制
 
