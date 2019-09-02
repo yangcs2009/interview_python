@@ -24,6 +24,11 @@
         * [常规配置](#常规配置)
         * [处理突发](#处理突发)
         * [无延迟的排队](#无延迟的排队)
+* [Zookeeper](#zookeeper)
+    * [定义](#定义)
+    * [重要概念](#重要概念)
+    * [ZooKeeper 特点](#zookeeper-特点)
+    * [ZooKeeper 集群角色介绍](#zookeeper-集群角色介绍)
 
 <!-- vim-markdown-toc -->
 # 负载均衡算法及主流算法
@@ -229,3 +234,42 @@ location /login/ {
 效果相当于每秒10个请求的“流量限制”。如果希望不限制两个请求间允许间隔的情况下实施“流量限制”，nodelay参数是很实用的。
 
 注意：对于大部分部署，我们建议使用burst和nodelay参数来配置limit_req指令。
+
+# Zookeeper
+
+[可能是全网把 ZooKeeper 概念讲的最清楚的一篇文章](https://segmentfault.com/a/1190000016349824#articleHeader9)
+
+[ZooKeeper基础](https://steflerjiang.github.io/2017/04/14/ZooKeeper%E5%9F%BA%E7%A1%80/)
+
+## 定义
+ZooKeeper 是一个开源的分布式协调服务。设计目标是将那些复杂且容易出错的分布式一致性服务封装起来，构成一个高效可靠的原语集，并以一系列简单易用的
+接口提供给用户使用。
+
+ZooKeeper 是一个典型的分布式数据一致性解决方案，分布式应用程序可以基于 ZooKeeper 实现诸如数据发布/订阅、负载均衡、命名服务、分布式协调/通知、
+集群管理、Master 选举、分布式锁和分布式队列等功能。
+
+## 重要概念
+
+* ZooKeeper  本身就是一个分布式程序（只要半数以上节点存活，ZooKeeper  就能正常服务）。
+* 为了保证高可用，最好是以集群形态来部署 ZooKeeper，这样只要集群中大部分机器是可用的（能够容忍一定的机器故障），那么 ZooKeeper 本身仍然是可用的。
+*  ZooKeeper  将数据保存在内存中，这也就保证了 高吞吐量和低延迟（但是内存限制了能够存储的容量不太大，此限制也是保持znode中存储的数据量较小的进一步原因）。
+*  ZooKeeper 是高性能的。 在“读”多于“写”的应用程序中尤其地高性能，因为“写”会导致所有的服务器间同步状态。（“读”多于“写”是协调服务的典型场景。）
+* ZooKeeper有临时节点的概念。 当创建临时节点的客户端会话一直保持活动，瞬时节点就一直存在。而当会话终结时，瞬时节点被删除。持久节点是指一旦这个ZNode被创建了，除非主动进行ZNode的移除操作，否则这个ZNode将一直保存在Zookeeper上。
+* ZooKeeper 底层其实只提供了两个功能：①管理（存储、读取）用户程序提交的数据；②为用户程序提交数据节点监听服务。
+
+## ZooKeeper 特点
+*  顺序一致性： 从同一客户端发起的事务请求，最终将会严格地按照顺序被应用到 ZooKeeper 中去。
+*  原子性： 所有事务请求的处理结果在整个集群中所有机器上的应用情况是一致的，也就是说，要么整个集群中所有的机器都成功应用了某一个事务，要么都没有应用。
+*  单一视图 ： 无论客户端连到哪一个 ZooKeeper 服务器上，其看到的服务端数据模型都是一致的。
+*  可靠性： 一旦一次更改请求被应用，更改的结果就会被持久化，直到被下一次更改覆盖。
+
+## ZooKeeper 集群角色介绍
+ZooKeeper 中没有选择传统的 Master/Slave 概念，而是引入了Leader、Follower 和 Observer 三种角色。如下图所示
+
+![zk_role.png](img/server/zk_role.png)
+
+ZooKeeper 集群中的所有机器通过一个 Leader 选举过程来选定一台称为 “Leader” 的机器，Leader 既可以为客户端提供写服务又能提供读服务。
+除了 Leader 外，Follower 和 Observer 都只能提供读服务。Follower 和 Observer 唯一的区别在于 Observer 机器不参与 Leader 的选举过程，
+也不参与写操作的“过半写成功”策略，因此 Observer 机器可以在不影响写性能的情况下提升集群的读性能。
+
+![zk_role_info.jpeg](img/server/zk_role_info.jpeg)
