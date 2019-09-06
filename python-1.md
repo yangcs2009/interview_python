@@ -116,7 +116,7 @@ new_list = list(set(old_list))
 s = 'abcde'    
 ss = s[::-1]    
 
-list初始化n个相同值两种方式）
+list初始化n个相同值两种方式
 >>> lst = ['x' for n in range(5)]
 >>> print(lst)
 ['x', 'x', 'x', 'x', 'x']
@@ -126,6 +126,18 @@ list初始化n个相同值两种方式）
 >>> lst = [0]*3
 >>> print(lst)
 [0, 0, 0]
+
+创建二维数组的办法
+2.1 直接创建法
+test = [0, 0, 0], [0, 0, 0], [0, 0, 0]]
+简单粗暴，不过太麻烦，一般不用。
+
+2.2 列表生成式法
+test = [[0 for i in range(m)] for j in range(n)]
+
+2.3 使用模块numpy创建
+import numpy as np
+test = np.zeros((m, n), dtype=np.int)
 
 dict初始化
 >>> # 示例一:
