@@ -51,9 +51,8 @@
 
 <!-- vim-markdown-toc -->
 
-# UNIX/Linux
 
-## 1、unix进程间通信方式(IPC)
+# 1、unix进程间通信方式(IPC)
 
 1. **管道（Pipe）**：管道可用于具有亲缘关系进程间的通信，允许一个进程和另一个与它 **有共同祖先的进程**之间进行通信。
 在linux系统中可以通过系统调用建立起一个单向的通信管道，且这种关系 **只能由父进程来建立**。
@@ -78,13 +77,13 @@
 8. **套接字（Socket）**：更为一般的进程间通信机制， **可用于不同机器之间的进程间通信**。起初是由Unix系统的BSD分支开发出来的，
 但现在一般可以移植到其它类Unix系统上：Linux和System V的变种都支持套接字。
 
-## 2、Linux IO模式(同步IO和异步IO，阻塞IO和非阻塞IO)及 select、poll、epoll详解
+# 2、Linux IO模式(同步IO和异步IO，阻塞IO和非阻塞IO)及 select、poll、epoll详解
 [转自](https://segmentfault.com/a/1190000003063859#articleHeader17)
 
 同步IO和异步IO，阻塞IO和非阻塞IO分别是什么，到底有什么区别？不同的人在不同的上下文下给出的答案是不同的。所以先限定一下本文的上下文。
 
 `本文讨论的背景是Linux环境下的network IO。`  
-### 一 概念说明
+## 一 概念说明
 在进行解释之前，首先要说明几个概念：  
 
 - 用户空间和内核空间  
@@ -93,7 +92,7 @@
 - 文件描述符  
 - 缓存 I/O  
 
-#### 用户空间与内核空间
+### 用户空间与内核空间
 ![memory.png](img/linux/memory.png)  
 现在操作系统都是采用虚拟存储器，那么对32位操作系统而言，它的寻址空间（虚拟存储空间）为4G（2的32次方）。操作系统的核心是内核，
 独立于普通的应用程序，可以访问受保护的内存空间，也有访问底层硬件设备的所有权限。为了保证用户进程不能直接操作内核（kernel），
@@ -101,7 +100,7 @@
 （从虚拟地址0xC0000000到0xFFFFFFFF），供内核使用，称为内核空间，而将较低的3G字节（从虚拟地址0x00000000到0xBFFFFFFF），
 供各个进程使用，称为用户空间。
 
-#### 进程切换
+### 进程切换
 为了控制进程的执行，内核必须有能力挂起正在CPU上运行的进程，并恢复以前挂起的某个进程的执行。这种行为被称为`进程切换`。因此可以说，
 任何进程都是在操作系统内核的支持下运行的，是与内核紧密相关的。
 
@@ -116,25 +115,25 @@
 
 注：总而言之就是很耗资源，具体的可以参考这篇文章：[进程切换](http://guojing.me/linux-kernel-architecture/posts/process-switch/)
 
-#### 进程的阻塞
+### 进程的阻塞
 正在执行的进程，由于期待的某些事件未发生，如请求系统资源失败、等待某种操作的完成、新数据尚未到达或无新工作做等，则由系统自动执行
 阻塞原语(Block)，使自己由运行状态变为阻塞状态。可见，进程的阻塞是进程 **自身**的一种主动行为，也因此只有处于运行态的进程（获得CPU），
 才可能将其转为阻塞状态。`当进程进入阻塞状态，是不占用CPU资源的`。
 
-#### 文件描述符fd
+### 文件描述符fd
 文件描述符（File descriptor）是计算机科学中的一个术语，是一个用于表述指向文件的引用的抽象化概念。  
 文件描述符在形式上是一个非负整数。实际上，它是一个索引值，指向内核为每一个进程所维护的该进程打开文件的记录表。当程序打开一个现有
 文件或者创建一个新文件时，`内核向进程返回一个文件描述符`。在程序设计中，一些涉及底层的程序编写往往会围绕着文件描述符展开。但是文件
 描述符这一概念往往只适用于UNIX、Linux这样的操作系统。
 
-#### 缓存I/O
+### 缓存I/O
 缓存I/O又被称作标准I/O，大多数文件系统的默认I/O操作都是缓存I/O。在 [Linux 的缓存I/O机制中](https://blog.csdn.net/lne818/article/details/1006784)，操作系统会将I/O的数据缓存在文件系统
 的页缓存（ page cache ）中，也就是说，`数据会先被拷贝到操作系统内核的缓冲区中，然后才会从操作系统内核的缓冲区拷贝到应用程序的地址空间`。
 
-#### 缓存 I/O 的缺点：
+### 缓存 I/O 的缺点：
 数据在传输过程中需要在应用程序地址空间和内核进行多次数据拷贝操作，这些数据拷贝操作所带来的CPU以及内存开销是非常大的。
 
-### 二 IO模式
+## 二 IO模式
 [5种网络IO模型](https://blog.csdn.net/xiexievv/article/details/44976215)  
 [聊聊Linux 五种IO模型](https://www.jianshu.com/p/486b0965c296)
 
@@ -154,7 +153,7 @@
 
 注：由于signal driven IO在实际中并不常用，所以下面只提及剩下的四种IO Model。
 
-#### 阻塞 I/O（blocking IO）
+### 阻塞 I/O（blocking IO）
 在linux中，默认情况下所有的socket都是blocking，一个典型的读操作流程大概是这样：  
 ![blocking-io](/img/linux/blocking.png)
 
@@ -165,7 +164,7 @@
 
 `所以，blocking IO的特点就是在IO执行的两个阶段都被block了。`
 
-#### 非阻塞 I/O（nonblocking IO）
+### 非阻塞 I/O（nonblocking IO）
 linux下，可以通过设置socket使其变为non-blocking。当对一个non-blocking socket执行读操作时，流程是这个样子：  
 ![nonblocking](/img/linux/nonblocking.png)
 
@@ -175,7 +174,7 @@ linux下，可以通过设置socket使其变为non-blocking。当对一个non-bl
 
 `所以，nonblocking IO的特点是用户进程需要不断的主动询问kernel数据好了没有。`
 
-#### I/O 多路复用（ IO multiplexing）
+### I/O 多路复用（ IO multiplexing）
 IO multiplexing就是我们说的select，poll，epoll，有些地方也称这种IO方式为event driven IO。select/epoll的好处就在于
 `单个process就可以同时处理多个网络连接的IO`。它的基本原理就是select，poll，epoll这个function会不断的轮询所负责的所有socket，
 当某个socket有数据到达了，就通知用户进程。  
@@ -195,7 +194,7 @@ web server性能更好，可能延迟还更大。select/epoll的优势并不是�
 在IO multiplexing Model中，实际中，对于每一个socket，一般都设置成为non-blocking，但是，如上图所示，整个用户的process
 其实是一直被block的。只不过process是被select这个函数block，而不是被socket IO给block。
 
-#### 异步 I/O（asynchronous IO）
+### 异步 I/O（asynchronous IO）
 Linux下的asynchronous IO其实用得很少。先看一下它的流程：  
 ![asynchronous](/img/linux/asynchronous.png)
 
@@ -203,11 +202,11 @@ Linux下的asynchronous IO其实用得很少。先看一下它的流程：
 会立刻返回，所以不会对用户进程产生任何block。然后，kernel会等待数据准备完成，然后将数据拷贝到用户内存，当这一切都完成之后，
 kernel会给用户进程发送一个signal，告诉它read操作完成了。
 
-#### 总结
-##### blocking和non-blocking的区别
+### 总结
+#### blocking和non-blocking的区别
 调用blocking IO会一直block住对应的进程直到操作完成，而non-blocking IO在kernel还准备数据的情况下会立刻返回。
 
-##### synchronous IO和asynchronous IO的区别
+#### synchronous IO和asynchronous IO的区别
 在说明synchronous IO和asynchronous IO的区别之前，需要先给出两者的定义。POSIX的定义是这样子的：
 
 - A synchronous I/O operation causes the requesting process to be blocked until that I/O operation completes;
@@ -231,7 +230,7 @@ block进程。但是，当kernel中数据准备好的时候，recvfrom会将数�
 而asynchronous IO则完全不同。它就像是用户进程将整个IO操作交给了他人（kernel）完成，然后他人做完后发信号通知。在此期间，用户进程不需要
 去检查IO操作的状态，也不需要主动的去拷贝数据。
 
-### 三 I/O 多路复用之select、poll、epoll详解
+## 三 I/O 多路复用之select、poll、epoll详解
 [selec,poll和epoll区别总结](http://www.cnblogs.com/Anker/p/3265058.html)
 
 [Tornado原理浅析](https://www.jiqizhixin.com/articles/2019-04-10-15)
@@ -240,7 +239,7 @@ block进程。但是，当kernel中数据准备好的时候，recvfrom会将数�
 （一般是读就绪或者写就绪），能够通知程序进行相应的读写操作**。但`select，poll，epoll本质上都是同步I/O`，因为他们都需要在读写事件
 就绪后自己负责进行读写，也就是说这个读写过程是阻塞的，而异步I/O则无需自己负责进行读写，异步I/O的实现会负责把数据从内核拷贝到用户空间。
 
-#### select
+### select
 `int select (int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);`  
 
 select 函数监视的文件描述符分3类，分别是writefds、readfds、和exceptfds。调用后select函数会阻塞，直到有描述符就绪
@@ -249,7 +248,7 @@ select 函数监视的文件描述符分3类，分别是writefds、readfds、和
 
 ![select_flow.png](img/linux/select_flow.png)
 
-##### Select实现过程
+#### Select实现过程
 
 1. 首先fdset集合里需要监控的文件句柄由程序员来添加，当前连接需要监控哪些文件句柄，那么通过FD_SET宏来进行添加。
 
@@ -270,7 +269,7 @@ select 函数监视的文件描述符分3类，分别是writefds、readfds、和
 select目前几乎在所有的平台上支持，其良好`跨平台支持`也是它的一个优点。select的一个缺点在于`单个进程能够监视的文件描述符的数量存在最大限制`，
 在Linux上一般为1024，可以通过修改宏定义甚至重新编译内核的方式提升这一限制，但是这样也会造成效率的降低。
 
-##### select缺点
+#### select缺点
 
 1. **句柄上限** select支持的文件描述符数量太小，默认1024，epoll无限制，所支持的FD上限是最大可以打开文件的数目，可查看`/proc/sys/fs/file-max`
 2. **查询效率低** 每次调用select都需要在内核遍历传递进来的 **所有fd**，这个开销在fd很多时也很大
@@ -280,7 +279,7 @@ poll改善了第一个缺点
 
 epoll改了三个缺点.
 
-#### poll
+### poll
 `int poll (struct pollfd *fds, unsigned int nfds, int timeout);`  
 不同于select使用三个位图来表示三个fdset的方式，poll使用一个pollfd的指针实现。
 
@@ -300,13 +299,13 @@ poll技术与select 技术本质上是没有区别的，只是文件句柄的存
 `从上面看，select和poll都需要在返回后，通过遍历文件描述符来获取已经就绪的socket。事实上，同时连接的大量客户端在一时刻可能只有
 很少的处于就绪状态，因此随着监视的描述符数量的增长，其效率也会线性下降。`
 
-#### epoll
+### epoll
 [关于epoll的介绍](http://www.cnblogs.com/my_life/articles/3968782.html)
 
 epoll是在2.6内核中提出的，是之前的select和poll的增强版本。相对于select和poll来说，epoll更加灵活，`没有描述符限制`。epoll
 使用一个文件描述符管理多个描述符，将用户关系的文件描述符的事件存放到内核的一个事件表中，这样在用户空间和内核空间的copy只需一次。
 
-##### 一 epoll操作过程
+#### 一 epoll操作过程
 epoll操作过程需要三个接口，分别如下：
 
 ```
@@ -348,7 +347,7 @@ EPOLLONESHOT：只监听一次事件，当监听完这次事件之后，如果�
 参数events用来从内核得到事件的集合，maxevents告之内核这个events有多大，这个maxevents的值不能大于创建epoll_create()时的
 size，参数timeout是超时时间（毫秒，0会立即返回，-1将不确定，也有说法说是永久阻塞）。该函数返回需要处理的事件数目，如返回0表示已超时。
 
-##### 二 工作模式
+#### 二 工作模式
 epoll对文件描述符的操作有两种模式：LT（level trigger）和ET（edge trigger）。LT模式是默认模式，LT模式与ET模式的区别如下：  
 LT模式：当epoll_wait检测到描述符事件发生并将此事件通知应用程序，应用程序可以不立即处理该事件。下次调用epoll_wait时，
 会再次响应应用程序并通知此事件。  
@@ -422,7 +421,7 @@ Linux环境下开发经常会碰到很多错误(设置errno)，其中EAGAIN是�
 read函数会返回一个错误EAGAIN，提示你的应用程序现在没有数据可读请稍后再试。
 又例如，当一个系统调用(比如fork)因为没有足够的资源(比如虚拟内存)而执行失败，返回EAGAIN提示其再调用一次(也许下次就能成功)。
 
-##### 三 代码演示
+#### 三 代码演示
 下面是一段不完整的代码且格式不对，意在表述上面的过程，去掉了一些模板代码。
 
 ```c
@@ -546,7 +545,7 @@ static void modify_event(int epollfd,int fd,int state){
 //注：另外一端我就省了
 ```
 
-##### 四 epoll总结
+#### 四 epoll总结
 `在select/poll中，进程只有在调用一定的方法后，内核才对所有监视的文件描述符进行扫描，而epoll事先通过epoll_ctl()来注册一个文件
 描述符，一旦基于某个文件描述符就绪时，内核会采用类似callback的回调机制，迅速激活这个文件描述符，当进程调用epoll_wait() 时便得到通知。(
 此处去掉了遍历文件描述符，而是通过监听回调的的机制。这正是epoll的魅力所在。)`
@@ -566,9 +565,9 @@ idle-connection，就会发现epoll的效率大大高于select/poll。
 3. 为了减少重复初始化过程中用户空间和内核空间发生不必要的拷贝带来的资源浪费，epoll技术提供了epoll_ctl函数，在用epoll_ctl函数进行事件注册的时候，
 会将文件句柄都复制到内核中，所以不用每次都复制一遍，当有新的文件句柄时采用的也是增量往内核拷贝，确保了每个文件句柄只会被拷贝一次。
 
-## 理解inode
+# 理解inode
 
-### inode是什么？
+## inode是什么？
 
 理解inode，要从文件储存说起。
 
@@ -580,7 +579,7 @@ idle-connection，就会发现epoll的效率大大高于select/poll。
 文件数据都储存在"块"中，那么很显然，我们还必须找到一个地方储存文件的`元信息`，比如文件的创建者、文件的创建日期、文件的大小等等。这种储存文件元信息的区域
 就叫做`inode`，中文译名为"索引节点"。
 
-### inode的内容
+## inode的内容
 
 inode包含文件的元信息，具体来说有以下内容：
 
@@ -614,7 +613,7 @@ Change: 2017-05-17 09:33:48.090467945 +0800
 
 总之， **除了文件名以外的所有文件信息，都存在inode之中**。至于为什么没有文件名，下文会有详细解释。
 
-### inode的大小
+## inode的大小
 
 inode也会消耗硬盘空间，所以硬盘格式化的时候，操作系统自动将硬盘分成两个区域。一个是`数据区`，存放文件数据；另一个是`inode区`（inode table），
 存放inode所包含的信息。
@@ -635,7 +634,7 @@ tmpfs           8148276      14  8148262    1% /sys/fs/cgroup
 
 由于每个文件都必须有一个inode，因此有可能发生inode已经用光，但是硬盘还未存满的情况。这时，就无法在硬盘上创建新文件。
 
-### inode号码
+## inode号码
 
 每个inode都有一个号码，`操作系统`用inode号码来识别不同的文件。
 
@@ -651,7 +650,7 @@ tmpfs           8148276      14  8148262    1% /sys/fs/cgroup
 5242910 nohup.out
 ```
 
-### inode的特殊作用
+## inode的特殊作用
 
 由于inode号码与文件名分离，这种机制导致了一些Unix/Linux系统特有的现象。
 
@@ -662,7 +661,7 @@ tmpfs           8148276      14  8148262    1% /sys/fs/cgroup
 第3点使得软件更新变得简单，可以在不关闭软件的情况下进行更新，不需要重启。因为系统通过inode号码，识别运行中的文件，不通过文件名。更新的时候，
 新版文件以同样的文件名，生成一个新的inode，不会影响到运行中的文件。等到下一次运行这个软件的时候，文件名就自动指向新版文件，旧版文件的inode则被回收。
 
-### Linux下删除正在进行读写操作的文件
+## Linux下删除正在进行读写操作的文件
 多进程环境下，打开同一个文件，进行读写操作过程中，如果其中一个进程删除这个文件，那么，另外正在读写这个文件会发生什么呢？
 
 Linux 是通过 link 的数量来控制文件删除，只有当一个文件不存在任何 link 的时候，这个文件才会被删除。
@@ -688,8 +687,8 @@ tcpdump 2864 tcpdump 4w REG 253,0 0 671457 /root/tcpdump.log (deleted)
 
 然后：cp /proc/2864/fd/4 /root/tcpdump.log
 
-## 软链接和硬链接
-### inode
+# 软链接和硬链接
+## inode
 
 ![inode.jpeg](img/linux/inode.jpeg)
 
@@ -703,7 +702,7 @@ Linux下的链接文件有点类似于Windows的快捷方式，但又不完全�
 
 ![link.jpeg](img/linux/link.jpeg)
 
-### 硬链接
+## 硬链接
 硬链接是通过索引节点进行的链接。在Linux中，多个文件指向同一个索引节点是允许的，像这样的链接就是硬链接。硬链接只能在 **同一文件系统**中的文件之间进行链接，
 **不能对目录进行创建**。如果删除硬链接对应的源文件，则硬链接文件仍然存在，而且保存了原有的内容，这样可以起到防止因为误操作而错误删除文件的作用。
 由于硬链接是有着相同 inode 号仅文件名不同的文件，因此，删除一个硬链接文件并不影响其他有相同 inode 号的文件。
@@ -715,7 +714,7 @@ link oldfile newfile
 ln oldfile newfile
 ```
 
-### 符号链接
+## 符号链接
 软链接（也叫符号链接）与硬链接不同，文件用户数据块中存放的内容是另一文件的路径名的指向。软链接就是一个普通文件，只是数据块内容有点特殊。软链接可对文件或目录创建。
 
 软链接主要应用于以下两个方面(应用场景）：
@@ -732,16 +731,16 @@ ln -s old.file soft.link
 ln -s old.dir soft.link.dir
 ```
 
-## awk、sed、grep
+# awk、sed、grep
 
 [awk、sed、grep](https://blog.csdn.net/qq_25663723/article/details/53161646)
 
-### awk
+## awk
 Alfred Aho Peter Weinberger和brian kernighan三个人的姓的缩写。  
 简单地说，`AWK`是一种用于处理文本的编程语言工具，相比于sed常常用于一整行的处理，awk则倾向于将一行分成数段来处理。  
 任何awk语句都是由模式和动作组成，一个awk脚本可以有多个语句。模式决定动作语句的触发条件和触发时间。 
 
-#### 语法结构
+### 语法结构
 
 ```
 awk 'BEGIN{ print "start" } ‘pattern{ commands }’ END{ print "end" }' file
@@ -751,7 +750,7 @@ awk 'BEGIN{ print "start" } ‘pattern{ commands }’ END{ print "end" }' file
 
 ![awk.png](img/linux/awk.png)
 
-#### awk内置变量（预定义变量）
+### awk内置变量（预定义变量）
 
 * $n 当前记录的第n个字段，比如n为1表示第一个字段，n为2表示第二个字段  
 * $0 这个变量包含执行过程中当前行的文本内容  
@@ -837,13 +836,13 @@ awk '{if($0 ~/^$/) print NR}' 8.txt
 6
 ```
 
-### sed
+## sed
 strem editor 流编辑器   
 sed 是一种在线编辑器，它一次处理一行内容。处理时，把当前处理的行存储在临时缓冲区中，称为“模式空间”（pattern space），接着用sed命令处理
 缓冲区中的内容，处理完成后，把缓冲区的内容送往屏幕。接着处理下一行，这样不断重复，直到文件末尾。文件内容并没有改变，除非你使用重定向存储输出。   
 **Sed主要用来自动编辑一个或多个文件；简化对文件的反复操作**
 
-#### 语法结构 
+### 语法结构 
 sed [options] ‘[command]’ filename    
 ![sed.png](img/linux/sed.png) 
  
@@ -900,11 +899,11 @@ sed 的-i选项可以直接修改文件中的内容
 sed -i 's/root/rm/' passwd
 ```
 
-### grep
+## grep
 Linux系统中grep命令是一种强大的文本搜索工具，它能使用正则表达式搜索文本，并把匹配的行打印出来。grep全称是Global Regular Expression Print，
 表示全局正则表达式版本，它的使用权限是所有用户。 
 
-#### 语法格式 
+### 语法格式 
 
 ```
 grep [options]
