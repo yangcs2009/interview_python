@@ -38,6 +38,10 @@
             * [分布式锁](#分布式锁)
             * [常见场景](#常见场景)
         * [单线程的redis为什么这么快](#单线程的redis为什么这么快)
+        * [Redis常见问题](#redis常见问题)
+            * [fork耗时高](#fork耗时高)
+        * [不小心手抖执行了flushdb](#不小心手抖执行了flushdb)
+        * [线上redis想将rdb模式换成aof模式](#线上redis想将rdb模式换成aof模式)
 * [4 乐观锁和悲观锁](#4-乐观锁和悲观锁)
     * [悲观锁与乐观锁](#悲观锁与乐观锁)
         * [悲观锁](#悲观锁)
@@ -566,6 +570,51 @@ ZADD命令用来按照新的顺序填充生成列表。列表可以实现非常�
 
 3. 采用了非阻塞I/O多路复用机制，可以处理并发的连接。非阻塞IO 内部实现采用epoll，采用了epoll+自己实现的简单的事件框架。epoll中的读、写、
 关闭、连接都转化成了事件，然后利用epoll的多路复用特性，绝不在io上浪费一点时间。
+
+
+### Redis常见问题
+#### fork耗时高
+
+**原因**
+
+1）当Redis做RDB或AOF重写时，一个必不可少的操作就是执行fork操作创建子进程，虽然fork创建的子进程不需要拷贝父进程的物理内存空间，但是
+会复制父进程的空间内存页表，可以在info stats统计中查latest_fork_usec指标获取最近一次fork操作耗时，单位（微秒）。
+
+**改善**
+
+1）优先使用物理机或者高效支持fork操作的虚拟化技术。
+
+2）控制redis单实例的内存大小。fork耗时跟内存量成正比，线上建议每个Redis实例内存控制在10GB以内。
+
+3）适度放宽AOF rewrite触发时机，目前线上配置：auto-aof-rewrite-percentage增长100 %
+
+**子进程开销、监控与优化**
+
+cpu  
+不要和其他CPU密集型服务部署在一起，造成CPU过度竞争  
+如果部署多个Redis实例，尽量保证同一时刻只有一个子进程执行重写工作  
+1G内存fork时间约20ms
+
+内存  
+背景：子进程通过fork操作产生，占用内存大小等同于父进程，理论上需要两倍的内存来完成持久化操作，但Linux有写时复制机制（copy-on-write）。父子进程
+会共享相同的物理内存页，当父进程处理写请求时会把要修改的页创建副本，而子进程在fork操作过程中共享整个父进程内存快照。
+
+Fork耗费的内存相关日志：AOF rewrite: 53 MB of memory used by copy-on-write，RDB: 5 MB of memory used by copy-on-write
+
+关闭巨页，开启之后，复制页单位从原来4KB变为2MB，增加fork的负担,会拖慢写操作的执行时间，导致大量写操作慢查询
+“sudo echo never>/sys/kernel/mm/transparent_hugepage/enabled
+
+硬盘  
+不要和其他高硬盘负载的服务部署在一起。如：存储服务、消息队列
+
+### 不小心手抖执行了flushdb
+如果配置appendonly no，迅速调大rdb触发参数，然后备份rdb文件，若备份失败，赶紧跑路。  
+配置了appedonly yes, 办法调大AOF重写参数auto-aof-rewrite-percentage和auto-aof-rewrite-minsize，或者直接kill进程，让Redis不能产生
+AOF自动重写。·拒绝手动bgrewriteaof。备份aof文件，同时将备份的aof文件中写入的flushdb命令干掉，然后还原。若还原不了，则依赖于冷备。
+
+### 线上redis想将rdb模式换成aof模式
+切不可直接修改conf，重启  
+正确方式：备份rdb文件，config set的方式打开aof，同时config rewrite写回配置，执行bgrewriteof，内存数据备份至配置文件
 
 # 4 乐观锁和悲观锁
 
