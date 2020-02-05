@@ -388,7 +388,8 @@ chunk供下次有适合大小item时使用，当我们用完这所有的5242个c
 ### Redis编码模式
 ![Redis数据模型图](img/database/encoding.png)  
 
-* 字符串可以被编码为embstr(小于39字节）、raw（一般字符串）或int（为了节约内存，Redis会将字符串表示的64位有符号整数编码为整数来进行储存）；
+* 字符串可以被编码为embstr(小于39字节。在3.0版本之前是以39字节为分界。在3.2版本之后，则变成了44字节为分界。）、raw（一般字符串）或int
+（为了节约内存，Redis会将字符串表示的64位有符号整数编码为整数来进行储存）；
   
 ![quicklist.jpg](img/database/quicklist.jpg) 
   
