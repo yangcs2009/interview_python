@@ -82,6 +82,7 @@
         * [区别](#区别)
         * [正向代理的应用](#正向代理的应用)
         * [反向代理的应用](#反向代理的应用)
+    * [urllib和urllib2的区别](#urllib和urllib2的区别)
 
 <!-- vim-markdown-toc -->
 # Python语言特性
@@ -1667,3 +1668,13 @@ extension 增加其他功能，虽然没有默认使用的数据库、窗体验�
 1. 保护内网安全 
 2. 负载均衡 
 3. 缓存，减少服务器的压力 
+
+
+
+## urllib和urllib2的区别
+
+1. urllib提供urlencode方法用来GET查询字符串的产生，而urllib2没有。这是为何urllib常和urllib2一起使用的原因。
+2. urllib2可以接受一个Request类的实例来设置URL请求的headers，urllib仅可以接受URL。这意味着，你不可以伪装你的User Agent字符串等。
+
+urllib2 can accept a Request object to set the headers for a URL request, urllib accepts only a URL. That means, you cannot masquerade your User Agent string etc.  
+urllib provides the urlencode method which is used for the generation of GET query strings, urllib2 doesn't have such a function. This is one of the reasons why urllib is often used along with urllib2.

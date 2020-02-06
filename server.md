@@ -30,6 +30,7 @@
         * [常规配置](#常规配置)
         * [处理突发](#处理突发)
         * [无延迟的排队](#无延迟的排队)
+    * [apache和nginx的区别](#apache和nginx的区别)
 * [Zookeeper](#zookeeper)
     * [定义](#定义)
     * [重要概念](#重要概念)
@@ -496,6 +497,21 @@ location /login/ {
 效果相当于每秒10个请求的“流量限制”。如果希望不限制两个请求间允许间隔的情况下实施“流量限制”，nodelay参数是很实用的。
 
 注意：对于大部分部署，我们建议使用burst和nodelay参数来配置limit_req指令。
+
+## apache和nginx的区别
+
+nginx 相对 apache 的优点：
+* 轻量级，同样起web 服务，比apache 占用更少的内存及资源
+* 抗并发，nginx 处理请求是异步非阻塞的，支持更多的并发连接，而apache 则是阻塞型的，在高并发下nginx 能保持低资源低消耗高性能
+* 配置简洁
+* 高度模块化的设计，编写模块相对简单
+* 社区活跃
+
+apache 相对nginx 的优点：
+* rewrite ，比nginx 的rewrite 强大
+* 模块超多，基本想到的都可以找到
+* 少bug ，nginx 的bug 相对较多
+* 超稳定
 
 # Zookeeper
 

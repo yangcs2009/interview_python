@@ -31,19 +31,17 @@
             * [exec( )函数族](#exec-函数族)
         * [read()、write()等函数](#readwrite等函数)
         * [close()函数](#close函数)
-    * [25 理解TCP backlog](#25-理解tcp-backlog)
+    * [理解TCP backlog](#理解tcp-backlog)
     * [3 ARP协议](#3-arp协议)
     * [ping过程解析](#ping过程解析)
         * [同一网段内](#同一网段内)
         * [不同网段内](#不同网段内)
-    * [4 urllib和urllib2的区别](#4-urllib和urllib2的区别)
     * [如何理解HTTP协议的 “无连接，无状态”](#如何理解http协议的-无连接无状态)
         * [无连接](#无连接)
         * [无状态](#无状态)
         * [Cookie](#cookie)
         * [Session](#session)
     * [6 Cookie和Session](#6-cookie和session)
-    * [7 apache和nginx的区别](#7-apache和nginx的区别)
     * [网站用户密码保存](#网站用户密码保存)
     * [HTTP详解](#http详解)
         * [HTTP简介](#http简介)
@@ -121,7 +119,7 @@ TCP/IP模型是互联网的基础，它是一系列网络协议的总称。这�
 
 1. 确认和重传机制
 
-建立连接时三次握手同步双方的“序列号 + 确认号 + 窗口大小信息”，是确认重传、流控的基础
+建立连接时三次握手同步双方的“序列号 + 确认号 + 窗口大小信息”，是确认重传、流控的基础  
 传输过程中，如果Checksum校验失败、丢包或延时，发送端重传
 
 2.  数据排序
@@ -176,7 +174,7 @@ _注意: 中断连接端可以是客户端，也可以是服务器端. 下面仅
 这个 CLOSE_WAIT 就是处于这个状态，等待发送 FIN，发送了FIN 则进入 LAST_ACK 状态。
 3. 第三次挥手：被动断开连接方发送FIN=1，seq=w包，用来停止向主动断开连接方发送数据，也就是告诉主动断开连接方，我的数据也发完了，
 我也不给你发数据了，此时被动断开连接方处于LAST_ACK状态，主动断开连接方处于TIME_WAIT 状态
-4. 第四次挥手：等过了一定时间（2MSL（Maximum Segment Lifetime，最大报文段生存时间）:为了保证最后ACK报文能够到达B，防止已失效连接请求报文段出现在此连接中）过后，主动断开连接方发送确认包ACK=1, ack=w+1，至此，四次挥手已经完成。
+4. 第四次挥手：主动断开连接方发送确认包ACK=1, ack=w+1。等过了一定时间（2MSL（Maximum Segment Lifetime，最大报文段生存时间，超过这个时间报文将被丢弃）:为了保证最后ACK报文能够到达B，防止已失效连接请求报文段出现在此连接中）过后，主动断开连接方关闭连接。至此，四次挥手已经完成。
 
 ### TCP的三次握手过程？为什么会采用三次握手，若采用二次握手可以吗？
 
@@ -188,10 +186,10 @@ _注意: 中断连接端可以是客户端，也可以是服务器端. 下面仅
 （3）采用两次握手不行，原因就是上面说的失效的连接请求的特殊情况。
 
 ### 四次挥手释放连接时，等待2MSL（TIME_WAIT）的意义？ 
-1. 可靠地终止TCP连接
-为了保证A发送的最后一个ACK报文段能够到达B。这个ACK报文段有可能丢失，处在LAST-ACK状态的B收不到对已发送的FIN和ACK报文段的确认。
+1. 可靠地终止TCP连接  
+**为了保证A发送的最后一个ACK报文段能够到达B。**这个ACK报文段有可能丢失，处在LAST-ACK状态的B收不到对已发送的FIN和ACK报文段的确认。
 B会超时重传这个FIN和ACK报文段，而A就能在2MSL时间内收到这个重传的ACK+FIN报文段。接着A重传一次确认。  
-2. 确保新TCP连接和老TCP连接不会相互干扰
+2. 确保新TCP连接和老TCP连接不会相互干扰  
 Linux下，一个TCP端口不能被同时打开两次以上。当一个TCP连接处于TIME-WAIT状时，我们将无法立即使用该连接占用的端口来建立一个新连接。如果不存在
 TIME-WAIT状态，，应用程序再建立一个一样的连接，这时新连接又可能收到旧连接TCP报文段，这显然是不应该发生。
 另外就是防止上面提到的已失效的连接请求报文段出现在本连接中，A在发送完最有一个ACK报文段后，再经过2MSL，就可以使本连接持续的时间内所产生的所有
@@ -277,13 +275,13 @@ Nagle算法：若发送应用进程把要发送的数据逐个字节地送到TCP
 用这样的方法逐步增大发送方的拥塞窗口 cwnd ，可以使分组注入到网络的速率更加合理。
 
 ![拥塞避免](/img/cwnd.jpg)  
-每经过一个传输轮次，拥塞窗口 cwnd 就 **加倍**。一个传输轮次所经历的时间其实就是往返时间RTT。不过“传输轮次”更加强调：
+每经过一个传输轮次，拥塞窗口 cwnd 就 **加倍**。一个传输轮次所经历的时间其实就是往返时间RTT（Round-Trip Time）。不过“传输轮次”更加强调：
 把拥塞窗口cwnd所允许发送的报文段都连续发送出去，并收到了对已发送的最后一个字节的确认。
 
 另，慢开始的“慢”并不是指cwnd的增长速率慢(开始慢），而是指在TCP开始发送报文段时 **先设置cwnd=1**，使得发送方在开始时只发送一个报文段
 （目的是试探一下网络的拥塞情况），然后再逐渐增大cwnd。
 
-为了防止拥塞窗口cwnd增长过大引起网络拥塞，还需要设置一个慢开始门限ssthresh状态变量（如何设置ssthresh）。
+为了防止拥塞窗口cwnd增长过大引起网络拥塞，还需要设置一个慢开始门限ssthresh（slow start threshold）状态变量（如何设置ssthresh）。
 慢开始门限ssthresh的用法如下：  
 当 cwnd < ssthresh 时，使用上述的慢开始算法。  
 当 cwnd > ssthresh 时，停止使用慢开始算法而改用拥塞避免算法。  
@@ -357,7 +355,7 @@ cwnd 减小到1，并执行慢开始算法，同时把慢开始门限值ssthresh
 
 ### socket()
 ```
-#include<sys/socket.h>
+#include <sys/socket.h>
 int socket(int domain, int type, int protocol);
 ```
 
@@ -394,7 +392,7 @@ type的值及含义
 |SOCK_PACKET	|这是一个专用类型，不能呢过在通用程序中使用
 
 protocol：故名思意，就是指定协议。常用的协议有，IPPROTO_TCP、IPPTOTO_UDP、IPPROTO_SCTP、IPPROTO_TIPC等，它们分别对应TCP传输协议、UDP传输协议、
-STCP传输协议、TIPC传输协议。函数socket()的第3个参数protocol用于制定某个协议的特定类型，即type类型中的某个类型。通常某协议中只有一种特定类型，
+STCP传输协议、TIPC传输协议。函数socket()的第3个参数protocol用于指定某个协议的特定类型，即type类型中的某个类型。通常某协议中只有一种特定类型，
 这样protocol参数仅能设置为0；但是有些协议有多种特定的类型，就需要设置这个参数来选择特定的类型。
 
 注意：并不是上面的type和protocol可以随意组合的，如SOCK_STREAM不可以跟IPPROTO_UDP组合。当protocol为0时，会自动选择type类型对应的默认协议。
@@ -411,7 +409,7 @@ int sock = socket(AF_INET, SOCK_STREAM, 0);
 ### bind()
 
 ```
-#include<sys/socket.h>
+#include <sys/socket.h>
 int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 ```
 
@@ -528,7 +526,7 @@ fork在英文中是"分叉"的意思。为什么取这个名字呢？因为一�
 
 #### exec( )函数族
 
-下面我们来看看一个进程如何来启动另一个程序的执行。在Linux中要使用exec函数族。系统调用execve（）对当前进程进行替换，替换者为一个指定的程序，
+下面我们来看看一个进程如何来启动另一个程序的执行。在Linux中要使用exec函数族。系统调用execve()对当前进程进行替换，替换者为一个指定的程序，
 其参数包括文件名（filename）、参数列表（argv）以及环境变量（envp）。exec函数族当然不止一个，但它们大致相同，在 Linux中，
 它们分别是： **execl，execlp，execle，execv，execve和execvp**，下面以execlp为例，其它函数究竟与execlp有何区别，请通过man exec命令来了解它们的具体情况。
 
@@ -603,7 +601,7 @@ read函数是负责从fd中读取内容。当读成功时，read返回实际所�
 EINTR说明读是由中断引起的，如果是ECONNREST表示网络连接出了问题。
 
 write函数将buf中的nbytes字节内容写入文件描述符fd.成功时返回写的字节数。失败时返回-1，并设置errno变量。 在网络程序中，当我们向套接字文件描述符
-写时有俩种可能。1)write的返回值大于0，表示写了部分或者是全部的数据。2)返回的值小于0，此时出现了错误。我们要根据错误类型来处理。如果错误为EINTR
+写时有两种可能。1)write的返回值大于0，表示写了部分或者是全部的数据。2)返回的值小于0，此时出现了错误。我们要根据错误类型来处理。如果错误为EINTR
 表示在写的时候出现了中断错误。如果为EPIPE表示网络连接出现了问题(对方已经关闭了连接)。
 
 ### close()函数
@@ -614,11 +612,11 @@ write函数将buf中的nbytes字节内容写入文件描述符fd.成功时返回
 int close(int fd);
 ```
 
-close一个TCP socket的缺省行为时把该socket标记为以关闭，然后立即返回到调用进程。该描述字不能再由调用进程使用，也就是说不能再作为read或write的第一个参数。
+close一个TCP socket的缺省行为时把该socket标记为已关闭，然后立即返回到调用进程。该描述字不能再由调用进程使用，也就是说不能再作为read或write的第一个参数。
 
 注意：close操作只是使相应socket描述字的引用计数-1，只有当引用计数为0的时候，才会触发TCP客户端向服务器发送终止连接请求。
 
-## 25 理解TCP backlog
+## 理解TCP backlog
 TCP建立连接是要进行三次握手，但是否完成三次握手后，服务器就处理（accept）呢？  
 　　客户端connect()返回不代表TCP连接建立成功，有可能此时服务器accept queue已满,OS会直接丢弃后续ACK请求；  
 　　客户端以为连接已建立，开始后续调用(譬如send)等待直至超时；  
@@ -647,7 +645,7 @@ net.core.somaxconn = 128 。
  
 　　第二种实现 方式在底层维护一个SYN_RECEIVED队列和一个ESTABLISHED队列，当SYN_RECEIVED队列中的连接返回ACK后，将被移动到ESTABLISHED队列中。
 backlog指的是ESTABLISHED队列的大小。
-　　
+
 　　传统的基于BSD的tcp实现第一种方式，在linux2.2之前，内核也实现第一种方式。当队列满了以后，服务端再收到SYN时，将不会返回SYN/ACK。比较优雅的处理方法
 就是不处理这条连接，不返回RST，让客户端重试。  
 　　在linux2.2后，选择第二种方式实现，SYN_RECEIVED队列的大小由proc/sys/net/ipv4/tcp_max_syn_backlog系统参数指定，ESTABLISHED队列由backlog和
@@ -722,7 +720,7 @@ TCPBacklogDrop: 2334
 
 ![topo.png](img/network/topo1.png) 
 
-在一个局域网中，计算机通信实际上是依赖于`MAC地址`进行通信的，那么ARP（Address Resolution Protocol）的作用就是根据IP地址查找出对应ip地址的MAC地址。
+在一个局域网中，计算机通信实际上是依赖于`MAC地址`进行通信的，那么ARP（Address Resolution Protocol）的作用就是 **根据IP地址查找出对应ip地址的MAC地址**。
 ping命令是依托于ICMP协议的，ICMP协议的存在就是为了更高效的转发IP数据报和提高交付成功的机会。
 
 在这里讲ping的两情况：一种是同一网段内，一种是跨网段的ping。
@@ -783,15 +781,6 @@ ARP报文格式为：
 最后，在主机C已学到路由器2端口MAC地址，路由器2端口转发给路由器1端口，路由1端口学到主机A的MAC地址的情况下，他们就不需要再做ARP解析，就将ICMP的回显请求回复过来。报文格式大致如下: 
 
 ![ping-5.png](img/network/ping-5.png) 
-
-## 4 urllib和urllib2的区别
-这个面试官确实问过,当时答的urllib2可以Post而urllib不可以.
-
-1. urllib提供urlencode方法用来GET查询字符串的产生，而urllib2没有。这是为何urllib常和urllib2一起使用的原因。
-2. urllib2可以接受一个Request类的实例来设置URL请求的headers，urllib仅可以接受URL。这意味着，你不可以伪装你的User Agent字符串等。
-
-urllib2 can accept a Request object to set the headers for a URL request, urllib accepts only a URL. That means, you cannot masquerade your User Agent string etc.  
-urllib provides the urlencode method which is used for the generation of GET query strings, urllib2 doesn't have such a function. This is one of the reasons why urllib is often used along with urllib2.
 
 ## 如何理解HTTP协议的 “无连接，无状态”
 
@@ -858,21 +847,6 @@ SessionId 保存在内存中，我们称之为无过期时间的 Cookie。浏览
 |安全性|不安全，别人可以分析存放在本地的COOKIE并进行COOKIE欺骗|安全|
 
 session技术是要使用到cookie的，之所以出现session技术，主要是为了安全。
-
-## 7 apache和nginx的区别
-
-nginx 相对 apache 的优点：
-* 轻量级，同样起web 服务，比apache 占用更少的内存及资源
-* 抗并发，nginx 处理请求是异步非阻塞的，支持更多的并发连接，而apache 则是阻塞型的，在高并发下nginx 能保持低资源低消耗高性能
-* 配置简洁
-* 高度模块化的设计，编写模块相对简单
-* 社区活跃
-
-apache 相对nginx 的优点：
-* rewrite ，比nginx 的rewrite 强大
-* 模块超多，基本想到的都可以找到
-* 少bug ，nginx 的bug 相对较多
-* 超稳定
 
 ## 网站用户密码保存
 
