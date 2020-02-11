@@ -1,58 +1,57 @@
 
 <!-- vim-markdown-toc GFM -->
 
-* [UNIX/Linux](#unixlinux)
-    * [1、unix进程间通信方式(IPC)](#1unix进程间通信方式ipc)
-    * [2、Linux IO模式(同步IO和异步IO，阻塞IO和非阻塞IO)及 select、poll、epoll详解](#2linux-io模式同步io和异步io阻塞io和非阻塞io及-selectpollepoll详解)
-        * [一 概念说明](#一-概念说明)
-            * [用户空间与内核空间](#用户空间与内核空间)
-            * [进程切换](#进程切换)
-            * [进程的阻塞](#进程的阻塞)
-            * [文件描述符fd](#文件描述符fd)
-            * [缓存I/O](#缓存io)
-            * [缓存 I/O 的缺点：](#缓存-io-的缺点)
-        * [二 IO模式](#二-io模式)
-            * [阻塞 I/O（blocking IO）](#阻塞-ioblocking-io)
-            * [非阻塞 I/O（nonblocking IO）](#非阻塞-iononblocking-io)
-            * [I/O 多路复用（ IO multiplexing）](#io-多路复用-io-multiplexing)
-            * [异步 I/O（asynchronous IO）](#异步-ioasynchronous-io)
-            * [总结](#总结)
-                * [blocking和non-blocking的区别](#blocking和non-blocking的区别)
-                * [synchronous IO和asynchronous IO的区别](#synchronous-io和asynchronous-io的区别)
-        * [三 I/O 多路复用之select、poll、epoll详解](#三-io-多路复用之selectpollepoll详解)
-            * [select](#select)
-                    * [Select实现过程](#select实现过程)
-                * [select缺点:](#select缺点)
-            * [poll](#poll)
-            * [epoll](#epoll)
-                * [一 epoll操作过程](#一-epoll操作过程)
-                * [二 工作模式](#二-工作模式)
-                * [三 代码演示](#三-代码演示)
-                * [四 epoll总结](#四-epoll总结)
-    * [理解inode](#理解inode)
-        * [inode是什么？](#inode是什么)
-        * [inode的内容](#inode的内容)
-        * [inode的大小](#inode的大小)
-        * [inode号码](#inode号码)
-        * [inode的特殊作用](#inode的特殊作用)
-        * [Linux下删除正在进行读写操作的文件](#linux下删除正在进行读写操作的文件)
-    * [软链接和硬链接](#软链接和硬链接)
-        * [inode](#inode)
-        * [硬链接](#硬链接)
-        * [符号链接](#符号链接)
-    * [awk、sed、grep](#awksedgrep)
-        * [awk](#awk)
-            * [语法结构](#语法结构)
-            * [awk内置变量（预定义变量）](#awk内置变量预定义变量)
-        * [sed](#sed)
-            * [语法结构](#语法结构-1)
-        * [grep](#grep)
-            * [语法格式](#语法格式)
+* [1、unix进程间通信方式(IPC Inter-process communication)](#1unix进程间通信方式ipc-inter-process-communication)
+* [2、Linux IO模式(同步IO和异步IO，阻塞IO和非阻塞IO)及 select、poll、epoll详解](#2linux-io模式同步io和异步io阻塞io和非阻塞io及-selectpollepoll详解)
+    * [一 概念说明](#一-概念说明)
+        * [用户空间与内核空间](#用户空间与内核空间)
+        * [进程切换](#进程切换)
+        * [进程的阻塞](#进程的阻塞)
+        * [文件描述符fd](#文件描述符fd)
+        * [缓存I/O](#缓存io)
+        * [缓存 I/O 的缺点：](#缓存-io-的缺点)
+    * [二 IO模式](#二-io模式)
+        * [阻塞 I/O（blocking IO）](#阻塞-ioblocking-io)
+        * [非阻塞 I/O（nonblocking IO）](#非阻塞-iononblocking-io)
+        * [I/O 多路复用（ IO multiplexing）](#io-多路复用-io-multiplexing)
+        * [异步 I/O（asynchronous IO）](#异步-ioasynchronous-io)
+        * [总结](#总结)
+            * [blocking和non-blocking的区别](#blocking和non-blocking的区别)
+            * [synchronous IO和asynchronous IO的区别](#synchronous-io和asynchronous-io的区别)
+    * [三 I/O 多路复用之select、poll、epoll详解](#三-io-多路复用之selectpollepoll详解)
+        * [select](#select)
+            * [Select实现过程](#select实现过程)
+            * [select缺点](#select缺点)
+        * [poll](#poll)
+        * [epoll](#epoll)
+            * [一 epoll操作过程](#一-epoll操作过程)
+            * [二 工作模式](#二-工作模式)
+            * [三 代码演示](#三-代码演示)
+            * [四 epoll总结](#四-epoll总结)
+* [理解inode](#理解inode)
+    * [inode是什么？](#inode是什么)
+    * [inode的内容](#inode的内容)
+    * [inode的大小](#inode的大小)
+    * [inode号码](#inode号码)
+    * [inode的特殊作用](#inode的特殊作用)
+    * [Linux下删除正在进行读写操作的文件](#linux下删除正在进行读写操作的文件)
+* [软链接（文件）和硬链接（文件）](#软链接文件和硬链接文件)
+    * [inode](#inode)
+    * [硬链接](#硬链接)
+    * [符号链接](#符号链接)
+* [awk、sed、grep](#awksedgrep)
+    * [awk](#awk)
+        * [语法结构](#语法结构)
+        * [awk内置变量（预定义变量）](#awk内置变量预定义变量)
+    * [sed](#sed)
+        * [语法结构](#语法结构-1)
+    * [grep](#grep)
+        * [语法格式](#语法格式)
 
 <!-- vim-markdown-toc -->
 
 
-# 1、unix进程间通信方式(IPC)
+# 1、unix进程间通信方式(IPC Inter-process communication)
 
 1. **管道（Pipe）**：管道可用于具有亲缘关系进程间的通信，允许一个进程和另一个与它 **有共同祖先的进程**之间进行通信。
 在linux系统中可以通过系统调用建立起一个单向的通信管道，且这种关系 **只能由父进程来建立**。
@@ -591,7 +590,7 @@ inode包含文件的元信息，具体来说有以下内容：
 
 　　* 文件的读、写、执行权限
 
-　　* 文件的时间戳，共有三个：ctime指inode上一次变动的时间，mtime指文件内容上一次变动的时间，atime指文件上一次打开的时间。
+　　* 文件的时间戳，共有三个：ctime指inode上一次变动的时间，mtime指文件内容上一次变动的时间，atime（access time）指文件上一次打开的时间。
 
 　　* 链接数，即有多少文件名指向这个inode
 
@@ -640,7 +639,9 @@ tmpfs           8148276      14  8148262    1% /sys/fs/cgroup
 
 这里值得重复一遍，Unix/Linux系统内部不使用文件名，而使用inode号码来识别文件。对于系统来说，文件名只是inode号码便于识别的别称或者绰号。
 
-表面上，用户通过文件名，打开文件。实际上，系统内部这个过程分成三步：首先，系统找到这个文件名对应的inode号码；其次，通过inode号码，获取inode信息；
+表面上，用户通过文件名，打开文件。实际上，系统内部这个过程分成 **三步**：  
+首先，系统找到这个文件名对应的inode号码；  
+其次，通过inode号码，获取inode信息；  
 最后，根据inode信息，找到文件数据所在的block，读出数据。
 
 使用ls -i命令，可以看到文件名对应的inode号码：
@@ -687,7 +688,7 @@ tcpdump 2864 tcpdump 4w REG 253,0 0 671457 /root/tcpdump.log (deleted)
 
 然后：cp /proc/2864/fd/4 /root/tcpdump.log
 
-# 软链接和硬链接
+# 软链接（文件）和硬链接（文件）
 ## inode
 
 ![inode.jpeg](img/linux/inode.jpeg)
@@ -737,7 +738,7 @@ ln -s old.dir soft.link.dir
 
 ## awk
 Alfred Aho Peter Weinberger和brian kernighan三个人的姓的缩写。  
-简单地说，`AWK`是一种用于处理文本的编程语言工具，相比于sed常常用于一整行的处理，awk则倾向于将一行分成数段来处理。  
+简单地说，`AWK`是一种用于处理文本的编程语言工具，相比于 **sed常常用于一整行的处理，awk则倾向于将一行分成数段来处理**。  
 任何awk语句都是由模式和动作组成，一个awk脚本可以有多个语句。模式决定动作语句的触发条件和触发时间。 
 
 ### 语法结构
@@ -790,7 +791,7 @@ ifconfig eth0|grep broadcast|awk '{print $2}'
 
 ```
 ifconfig eth0 |awk -F '[ :]+' 'NR==2 {print $4}'
-# [  :]+表示以空格和分号为分隔符，但是因为有可能有多个空格，所以用一个+表示重复前的,NR==2表示行号
+# [  :]+表示以空格和冒号为分隔符，但是因为有可能有多个空格，所以用一个+表示重复前的,NR==2表示行号
 ```
 
 正则使用 
