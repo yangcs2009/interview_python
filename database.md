@@ -2,9 +2,15 @@
 <!-- vim-markdown-toc GFM -->
 
 * [MySQL架构](#mysql架构)
+    * [三层架构](#三层架构)
     * [连接管理及安全性](#连接管理及安全性)
     * [优化和执行](#优化和执行)
-* [1 事务](#1-事务)
+* [MyISAM和InnoDB(MySQL引擎）](#myisam和innodbmysql引擎)
+    * [1、文件组织形式不同（表的存储方面）：](#1文件组织形式不同表的存储方面)
+    * [2、索引不同：](#2索引不同)
+    * [3、事务：](#3事务)
+    * [4、锁：](#4锁)
+* [事务](#事务)
     * [事务的四个特性](#事务的四个特性)
         * [原子性（Atomicity）](#原子性atomicity)
         * [一致性（Consistency）](#一致性consistency)
@@ -55,11 +61,6 @@
     * [乐观锁的缺点](#乐观锁的缺点)
     * [CAS与synchronized的使用情景](#cas与synchronized的使用情景)
 * [5 MVCC（Multiversion Concurrency Control）](#5-mvccmultiversion-concurrency-control)
-* [6 MyISAM和InnoDB(MySQL引擎）](#6-myisam和innodbmysql引擎)
-    * [1、文件组织形式不同（表的存储方面）：](#1文件组织形式不同表的存储方面)
-    * [2、索引不同：](#2索引不同)
-    * [3、事务：](#3事务)
-    * [4、锁：](#4锁)
 * [7 范式](#7-范式)
 
 <!-- vim-markdown-toc -->
@@ -67,6 +68,8 @@
 # MySQL架构
 
 [MySQL系列-- 1.MySQL架构](https://juejin.im/post/59ec528bf265da43333d8bb0)
+
+## 三层架构
 
 ![mysql_arch.png](img/database/mysql_arch.png)
 
@@ -92,7 +95,38 @@ MySQL会解析查询，创建内部数据结构(解析树)，并对其进行各�
 
 对于SELECT语句，在解析查询前，服务器会先检查查询缓存(Query Cache)。
 
-# 1 事务
+# MyISAM和InnoDB(MySQL引擎）
+
+Myisam与InnoDB的区别：
+
+## 1、文件组织形式不同（表的存储方面）：
+InnoDB的存储方式是一个表空间数据文件，一个日志文件，而MyIsam的存储方式是索引文件（.MYI（myindex）），
+数据文件(.MYD(mydata))，表存储定义文件(.frm)
+
+## 2、索引不同：
+
+## 3、事务： 
+最主要的一点是MyIsam不支持`事务操作，外键以及行级锁`，而InnoDB支持这些功能。
+
+## 4、锁：
+Myisam只支持表锁，不支持行锁  
+MyIsam只支持表级锁，当多线程并发操作数据库时，
+就会为整个表上锁，而InnoDB 则从行上锁。但这也是不一定的，如果一个SQL语句不能确定扫描范围的话，也会为整个表上锁，
+比如： update table set num=1 where name like “%aaa%”
+
+但是MyIsam的`读的速度`比InnoDB更加快一些，InnoDB不保存表的行数，比如要执行count(*)的话，它就会扫描整个表，但是如果是MyIsam的话，直接返回行数
+
+InnoDB执行Drop from table 时，不会重新建表，而是一行一行删除。如果执行大量的select操作选择MyIsam，如果有大量的insert和update操作，选择InnoDB。
+
+AUTO_INCREMENT 对于AUTO_INCREMENT类型的字段，InnoDB中必须包含只有该字段的索引，但是在MyISAM表中，可以和其他字段一起建立联合索引
+
+`MyISAM 适合于一些需要大量查询的应用，但其对于有大量写操作并不是很好`。甚至你只是需要update一个字段，整个表都会被锁起来，而别的进程，
+就算是读进程都无法操作直到读操作完成。另外，MyISAM 对于 SELECT COUNT(*) 这类的计算是超快无比的。
+
+InnoDB 的趋势会是一个非常复杂的存储引擎，对于一些小的应用，它会比 MyISAM 还慢。但是它支持“行锁” ，于是在写操作比较多的时候，会更优秀。
+并且，他还支持更多的高级应用，比如：事务。
+
+# 事务
 
 **数据库事务(Database Transaction)** ，是指作为单个逻辑工作单元执行的一系列操作集合，要么完全地执行，要么完全地不执行。
 一方面，当多个应用程序并发访问数据库时，事务可以在应用程序间提供一个隔离方法，防止互相干扰。另一方面，事务为数据库操作序列提供了一个从失败恢复正常的方法。
@@ -116,7 +150,7 @@ undo log为逻辑日志（记录的是行记录的修改，redo log记录的是�
 当update一条记录时，undo log记录一条对应相反的update记录。
 
 
-###一致性（Consistency）
+### 一致性（Consistency）
 事务的一致性是指事务的执行不能破坏数据库的一致性，一致性也称为完整性。一个事务在执行后，数据库必须从一个一致性状态转变为另一个一致性状态。
 
 一致性是事务的根本追求。数据库系统通过并发控制技术和日志恢复技术来避免不一致性的产生。
@@ -771,37 +805,6 @@ CAS 只对单个共享变量有效，当操作涉及跨多个共享变量时 CAS
 [浅谈数据库并发控制 - 锁和 MVCC](https://draveness.me/database-concurrency-control)
 
 MVCC(Multiversion concurrency control) 就是 **同一份数据临时保留多版本的一种方式，进而实现并发控制**
-
-# 6 MyISAM和InnoDB(MySQL引擎）
-
-Myisam与InnoDB的区别：
-
-## 1、文件组织形式不同（表的存储方面）：
-InnoDB的存储方式是一个表空间数据文件，一个日志文件，而MyIsam的存储方式是索引文件（.MYI（myindex）），
-数据文件(.MYD(mydata))，表存储定义文件(.frm)
-
-## 2、索引不同：
-
-## 3、事务： 
-最主要的一点是MyIsam不支持`事务操作，外键以及行级锁`，而InnoDB支持这些功能。
-
-## 4、锁：
-Myisam只支持表锁，不支持行锁  
-MyIsam只支持表级锁，当多线程并发操作数据库时，
-就会为整个表上锁，而InnoDB 则从行上锁。但这也是不一定的，如果一个SQL语句不能确定扫描范围的话，也会为整个表上锁，
-比如： update table set num=1 where name like “%aaa%”
-
-但是MyIsam的`读的速度`比InnoDB更加快一些，InnoDB不保存表的行数，比如要执行count(*)的话，它就会扫描整个表，但是如果是MyIsam的话，直接返回行数
-
-InnoDB执行Drop from table 时，不会重新建表，而是一行一行删除。如果执行大量的select操作选择MyIsam，如果有大量的insert和update操作，选择InnoDB。
-
-AUTO_INCREMENT 对于AUTO_INCREMENT类型的字段，InnoDB中必须包含只有该字段的索引，但是在MyISAM表中，可以和其他字段一起建立联合索引
-
-`MyISAM 适合于一些需要大量查询的应用，但其对于有大量写操作并不是很好`。甚至你只是需要update一个字段，整个表都会被锁起来，而别的进程，
-就算是读进程都无法操作直到读操作完成。另外，MyISAM 对于 SELECT COUNT(*) 这类的计算是超快无比的。
-
-InnoDB 的趋势会是一个非常复杂的存储引擎，对于一些小的应用，它会比 MyISAM 还慢。但是它支持“行锁” ，于是在写操作比较多的时候，会更优秀。
-并且，他还支持更多的高级应用，比如：事务。
 
 # 7 范式
 ◆ 第一范式（1NF）：强调的是 **列的原子性**，即列不能够再分成其他几列。 考虑这样一个表：【联系人】（姓名，性别，电话） 如果在实际场景中，
