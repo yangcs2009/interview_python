@@ -1,58 +1,67 @@
 
 <!-- vim-markdown-toc GFM -->
 
-* [MySQL架构](#mysql架构)
-    * [连接管理及安全性](#连接管理及安全性)
-    * [优化和执行](#优化和执行)
-* [1 事务](#1-事务)
-    * [事务的四个特性](#事务的四个特性)
-    * [数据库隔离级别](#数据库隔离级别)
-    * [事务的四个隔离级别](#事务的四个隔离级别)
-    * [隔离级别的选择](#隔离级别的选择)
-* [2 数据库索引](#2-数据库索引)
-    * [B-Tree和B+Tree](#b-tree和btree)
-        * [B-Tree](#b-tree)
-        * [B+Tree](#btree)
-        * [带有顺序访问指针的B+Tree](#带有顺序访问指针的btree)
-    * [b+树性质](#b树性质)
-    * [联合索引的结构](#联合索引的结构)
-    * [建索引的几大原则](#建索引的几大原则)
-    * [建立数据库索引的作用](#建立数据库索引的作用)
-    * [索引使用场景](#索引使用场景)
-    * [聚簇索引与非聚簇索引](#聚簇索引与非聚簇索引)
-    * [唯一索引 主键索引 聚集索引](#唯一索引-主键索引-聚集索引)
-    * [MyISAM索引实现](#myisam索引实现)
-    * [InnoDB索引实现](#innodb索引实现)
-* [3 缓存那些事，兼论redis和memcached](#3-缓存那些事兼论redis和memcached)
-    * [memcached](#memcached)
-        * [memcached的内存管理机制](#memcached的内存管理机制)
-    * [Redis](#redis)
-        * [Redis编码模式](#redis编码模式)
-        * [Redis内存管理](#redis内存管理)
-        * [Redis内部数据结构](#redis内部数据结构)
-            * [SDS](#sds)
-            * [BloomFilter原理，实现及优化](#bloomfilter原理实现及优化)
-        * [6种的数据淘汰策略](#6种的数据淘汰策略)
-        * [应用场景](#应用场景)
-            * [Redis延迟队列](#redis延迟队列)
-            * [分布式锁](#分布式锁)
-            * [常见场景](#常见场景)
-        * [单线程的redis为什么这么快](#单线程的redis为什么这么快)
-        * [Redis常见问题](#redis常见问题)
-            * [fork耗时高](#fork耗时高)
-        * [不小心手抖执行了flushdb](#不小心手抖执行了flushdb)
-        * [线上redis想将rdb模式换成aof模式](#线上redis想将rdb模式换成aof模式)
-* [4 乐观锁和悲观锁](#4-乐观锁和悲观锁)
-    * [悲观锁与乐观锁](#悲观锁与乐观锁)
-        * [悲观锁](#悲观锁)
-        * [乐观锁](#乐观锁)
-        * [两种锁的使用场景](#两种锁的使用场景)
-    * [乐观锁常见的两种实现方式](#乐观锁常见的两种实现方式)
-    * [乐观锁的缺点](#乐观锁的缺点)
-    * [CAS与synchronized的使用情景](#cas与synchronized的使用情景)
-* [5 MVCC（Multiversion Concurrency Control）](#5-mvccmultiversion-concurrency-control)
-* [6 MyISAM和InnoDB](#6-myisam和innodb)
-* [7 范式](#7-范式)
+        * [MySQL架构](#mysql架构)
+            * [连接管理及安全性](#连接管理及安全性)
+            * [优化和执行](#优化和执行)
+        * [1 事务](#1-事务)
+            * [事务的四个特性](#事务的四个特性)
+                * [原子性（Atomicity）](#原子性atomicity)
+                * [一致性（Consistency）](#一致性consistency)
+                * [隔离型（Isolation）](#隔离型isolation)
+                * [持久性（Durability）](#持久性durability)
+* [](#)
+            * [数据库隔离级别](#数据库隔离级别)
+            * [事务的四个隔离级别](#事务的四个隔离级别)
+            * [隔离级别的选择](#隔离级别的选择)
+        * [2 数据库索引](#2-数据库索引)
+            * [B-Tree和B+Tree](#b-tree和btree)
+                * [B-Tree](#b-tree)
+                * [B+Tree](#btree)
+                * [带有顺序访问指针的B+Tree](#带有顺序访问指针的btree)
+            * [b+树性质](#b树性质)
+            * [联合索引的结构](#联合索引的结构)
+            * [建索引的几大原则](#建索引的几大原则)
+            * [建立数据库索引的作用](#建立数据库索引的作用)
+            * [索引使用场景](#索引使用场景)
+            * [聚簇索引与非聚簇索引](#聚簇索引与非聚簇索引)
+            * [唯一索引 主键索引 聚集索引](#唯一索引-主键索引-聚集索引)
+            * [MyISAM索引实现](#myisam索引实现)
+            * [InnoDB索引实现](#innodb索引实现)
+        * [3 缓存那些事，兼论redis和memcached](#3-缓存那些事兼论redis和memcached)
+            * [memcached](#memcached)
+                * [memcached的内存管理机制](#memcached的内存管理机制)
+            * [Redis](#redis)
+                * [Redis编码模式](#redis编码模式)
+                * [Redis内存管理](#redis内存管理)
+                * [Redis内部数据结构](#redis内部数据结构)
+                    * [SDS](#sds)
+                    * [BloomFilter原理，实现及优化](#bloomfilter原理实现及优化)
+                * [6种的数据淘汰策略](#6种的数据淘汰策略)
+                * [应用场景](#应用场景)
+                    * [Redis延迟队列](#redis延迟队列)
+                    * [分布式锁](#分布式锁)
+                    * [常见场景](#常见场景)
+                * [单线程的redis为什么这么快](#单线程的redis为什么这么快)
+                * [Redis常见问题](#redis常见问题)
+                    * [fork耗时高](#fork耗时高)
+                * [不小心手抖执行了flushdb](#不小心手抖执行了flushdb)
+                * [线上redis想将rdb模式换成aof模式](#线上redis想将rdb模式换成aof模式)
+        * [4 乐观锁和悲观锁](#4-乐观锁和悲观锁)
+            * [悲观锁与乐观锁](#悲观锁与乐观锁)
+                * [悲观锁](#悲观锁)
+                * [乐观锁](#乐观锁)
+                * [两种锁的使用场景](#两种锁的使用场景)
+            * [乐观锁常见的两种实现方式](#乐观锁常见的两种实现方式)
+            * [乐观锁的缺点](#乐观锁的缺点)
+            * [CAS与synchronized的使用情景](#cas与synchronized的使用情景)
+        * [5 MVCC（Multiversion Concurrency Control）](#5-mvccmultiversion-concurrency-control)
+        * [6 MyISAM和InnoDB(MySQL引擎）](#6-myisam和innodbmysql引擎)
+            * [1、文件组织形式不同（表的存储方面）：](#1文件组织形式不同表的存储方面)
+            * [2、索引不同：](#2索引不同)
+            * [3、事务：](#3事务)
+            * [4、锁：](#4锁)
+        * [7 范式](#7-范式)
 
 <!-- vim-markdown-toc -->
 
@@ -86,20 +95,75 @@ MySQL会解析查询，创建内部数据结构(解析树)，并对其进行各�
 
 # 1 事务
 
-**数据库事务(Database Transaction)** ，是指作为单个逻辑工作单元执行的一系列操作，要么完全地执行，要么完全地不执行。
+**数据库事务(Database Transaction)** ，是指作为单个逻辑工作单元执行的一系列操作集合，要么完全地执行，要么完全地不执行。
 一方面，当多个应用程序并发访问数据库时，事务可以在应用程序间提供一个隔离方法，防止互相干扰。另一方面，事务为数据库操作序列提供了一个从失败恢复正常的方法。
 
 ## 事务的四个特性
 
 事务具有四个特性：原子性（Atomicity）、一致性（Consistency）、隔离型（Isolation）、持久性（Durability），简称ACID。
 
-**原子性（Atomicity）** 事务的原子性是指事务中的操作不可拆分，只允许全部执行或者全部不执行。
+### 原子性（Atomicity）
+事务的原子性是指事务中的操作不可拆分，只允许全部执行或者全部不执行。
 
-**一致性（Consistency）** 事务的一致性是指事务的执行不能破坏数据库的一致性，一致性也称为完整性。一个事务在执行后，数据库必须从一个一致性状态转变为另一个一致性状态。
+**实现原理：undo log**   
+Undo log是为了实现事务的原子性。在MySQL数据库InnoDB存储引擎中，还用Undo log来实现多版本并发控制
 
-**隔离型（Isolation）** 事务的隔离性是指并发的事务相互隔离，不能互相干扰。
+在操作任何数据前，首先将数据备份到一个地方（存储数据备份的地方称为Undo log）。然后进行数据修改。如果出现错误或者用户执行了rollback语句，系统可以利用
+undo log中的备份将数据恢复到事务开始前的状态。
 
-**持久性（Durability）** 事务的持久性是指事务一旦提交，对数据的状态变更应该被永久保存。
+undo log为逻辑日志（记录的是行记录的修改，redo log记录的是页记录的修改），可以理解为：  
+当delete一条记录时，undo log记录一条对应的insert记录；  
+当insert一条记录时，undo log记录一条对应的delete记录；
+当update一条记录时，undo log记录一条对应相反的update记录。
+
+
+###一致性（Consistency）
+事务的一致性是指事务的执行不能破坏数据库的一致性，一致性也称为完整性。一个事务在执行后，数据库必须从一个一致性状态转变为另一个一致性状态。
+
+一致性是事务的根本追求。数据库系统通过并发控制技术和日志恢复技术来避免不一致性的产生。
+
+### 隔离型（Isolation）
+事务的隔离性是指并发的事务相互隔离，不能互相干扰。
+
+**实现原理：锁**  
+
+mysql中锁可以分两类：  
+共享锁：lock in share mode  
+排它锁：for update  
+
+锁的粒度：  
+记录（hang）  
+表  
+数据库
+
+基于锁的并发控制 （还有通过基于时间戳/有效性检查/快照隔离的并发控制)   
+事务跟进自己对数据项进行的操作类型申请响应的锁（读申请共享锁，写申请排它锁）；  
+申请锁的请求被发送给锁管理器。锁管理器跟进当前数据项是否已经有锁以及申请的和持有的锁是否冲突决定是否为该请求授予锁；  
+若锁被授予，则申请锁的事务可以继续执行；若被拒绝，事务将进行等待，知道锁被其他事务释放；
+
+可能出现的问题：  
+死锁：多个事务持有锁并相互循环等待其他事务的锁导致所有事务无法继续执行
+
+### 持久性（Durability）
+事务的持久性是指事务一旦提交，对数据的状态变更应该被永久保存。
+
+**实现原理：Redo log**  
+和ndo log相反，Redo log记录的是新数据的备份。在事务提交前，只要将Redo log持久化即可，不需要将数据持久化。系统崩溃时虽然数据没有持久化，但是
+Redo log已经持久化，系统可以根据Redo log的内容，将所有数据恢复到新的状态（innodb_flush_log_at_trx_commit)
+
+![redo_undo_log.png](img/database/redo_undo_log.png)
+
+![log_sync.png](img/database/log_sync.png)
+
+MySQL日志类型
+
+binlog
+
+slowlog
+
+redo/undo log (innodb引擎特有）
+
+##
 
 ## 数据库隔离级别
 
@@ -711,11 +775,22 @@ CAS 只对单个共享变量有效，当操作涉及跨多个共享变量时 CAS
 
 MVCC(Multiversion concurrency control) 就是 **同一份数据临时保留多版本的一种方式，进而实现并发控制**
 
-# 6 MyISAM和InnoDB
+# 6 MyISAM和InnoDB(MySQL引擎）
 
 Myisam与InnoDB的区别：
 
-最主要的一点是MyIsam不支持`事务操作，外键以及行级锁`，而InnoDB支持这些功能。MyIsam只支持表级锁，当多线程并发操作数据库时，
+## 1、文件组织形式不同（表的存储方面）：
+InnoDB的存储方式是一个表空间数据文件，一个日志文件，而MyIsam的存储方式是索引文件（.MYI（myindex）），
+数据文件(.MYD(mydata))，表存储定义文件(.frm)
+
+## 2、索引不同：
+
+## 3、事务： 
+最主要的一点是MyIsam不支持`事务操作，外键以及行级锁`，而InnoDB支持这些功能。
+
+## 4、锁：
+Myisam只支持表锁，不支持行锁  
+MyIsam只支持表级锁，当多线程并发操作数据库时，
 就会为整个表上锁，而InnoDB 则从行上锁。但这也是不一定的，如果一个SQL语句不能确定扫描范围的话，也会为整个表上锁，
 比如： update table set num=1 where name like “%aaa%”
 
@@ -724,9 +799,6 @@ Myisam与InnoDB的区别：
 InnoDB执行Drop from table 时，不会重新建表，而是一行一行删除。如果执行大量的select操作选择MyIsam，如果有大量的insert和update操作，选择InnoDB。
 
 AUTO_INCREMENT 对于AUTO_INCREMENT类型的字段，InnoDB中必须包含只有该字段的索引，但是在MyISAM表中，可以和其他字段一起建立联合索引
-
-表的存储方面：InnoDB的存储方式是一个表空间数据文件，一个日志文件，而MyIsam的存储方式是索引文件（.MYI（myindex）），
-数据文件(.MYD(mydata))，表存储定义文件(.frm)
 
 `MyISAM 适合于一些需要大量查询的应用，但其对于有大量写操作并不是很好`。甚至你只是需要update一个字段，整个表都会被锁起来，而别的进程，
 就算是读进程都无法操作直到读操作完成。另外，MyISAM 对于 SELECT COUNT(*) 这类的计算是超快无比的。
