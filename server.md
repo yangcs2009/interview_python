@@ -21,6 +21,9 @@
     * [概述](#概述)
     * [Nginx特点](#nginx特点)
     * [Nginx工作模式](#nginx工作模式)
+        * [进程模型](#进程模型)
+        * [工作流程](#工作流程)
+        * [Nginx 的事件处理模型](#nginx-的事件处理模型)
     * [Nginx参数配置demo](#nginx参数配置demo)
 * [Nginx流量控制](#nginx流量控制)
     * [限流算法](#限流算法)
@@ -188,7 +191,22 @@ Nginx（发音同engine x）是异步框架的网页服务器，也可以用作�
 
 ## Nginx工作模式
 
-![nginx_process.png](img/server/nginx_process.png)
+### 进程模型
+![nginx-multi-progress-model.png](img/server/nginx-multi-progress-model.png)
+
+1. **多进程**：一个 Master 进程、多个 Worker 进程
+2. **Master 进程**：管理 Worker 进程
+    * 对外接口：接收外部的操作（信号）
+    * 对内转发：根据外部的操作的不同，通过信号管理 Worker
+    * 监控：监控 worker 进程的运行状态，worker 进程异常终止后，自动重启 worker 进程
+3. **Worker 进程**：所有 Worker 进程都是平等的
+    * 实际处理：网络请求，由 Worker 进程处理；
+    * Worker 进程数量：在 nginx.conf 中配置，一般设置为核心数，充分利用 CPU 资源，同时，避免进程数量过多，避免进程竞争 CPU 资源，增加上下文切换的损耗。
+
+
+### 工作流程
+
+![nginx-master-worker-details.png](img/server/nginx-master-worker-details.png)
 
 nginx是以多进程的方式来工作的，当然nginx也是支持多线程的方式的,只是我们主流的方式还是多进程的方式，也是nginx的默认方式。nginx采用多进程的方式有诸多好处。
 
@@ -215,40 +233,52 @@ accept_mutex是一个可控选项，我们可以显示地关掉，默认是打�
 所以降低了风险。当然，好处还有很多，大家可以慢慢体会。
 
 5. 有人可能要问了，nginx采用多worker的方式来处理请求，每个worker里面只有一个主线程，那能够处理的并发数很有限啊，多少个worker就能处理多少个并发，
-何来高并发呢？非也，这就是nginx的高明之处，nginx采用了异步非阻塞的方式来处理请求，也就是说，nginx是可以同时处理成千上万个请求的 .
+何来高并发呢？非也，这就是nginx的高明之处，nginx采用了 **异步非阻塞**(它指的是nginx事件处理流程，而不是对epoll的调用)的方式来处理请求，也就是说，nginx是可以同时处理成千上万个请求的 .
 我们之前说过，推荐设置worker的个数为cpu的核数，在这里就很容易理解了，更多的worker数，只会导致进程来竞争cpu资源了，从而带来不必要的上下文切换。
 而且，nginx为了更好的利用多核特性，提供了cpu亲缘性的绑定选项，我们可以将某一个进程绑定在某一个核上，这样就不会因为进程的切换带来cache的失效。
  
- 
+### Nginx 的事件处理模型
+
+![nginx-request-process-model](img/server/nginx-request-process-model.png)
+request：Nginx 中 http 请求。
+
+基本的 HTTP Web Server 工作模式：
+
+1. 接收请求：逐行读取请求行和请求头，判断段有请求体后，读取请求体
+2. 处理请求
+3. 返回响应：根据处理结果，生成相应的 HTTP 请求（响应行、响应头、响应体）
+
+Nginx 也是这个套路，整体流程一致。 
+
+
+
 
 ## Nginx参数配置demo
 
 ```
-#定义Nginx运行的用户和用户组        
+    # 定义Nginx运行的用户和用户组        
     user www www;              
     #nginx进程数，建议设置为等于CPU总核心数。        
     worker_processes 8;        
       
     #全局错误日志定义类型，[ debug | info | notice | warn | error | crit ]  
       
-    error_log ar/loginx/error.log info;  
+    error_log /var/log/nginx/error.log info;  
              
-    #进程文件  
-      
-    pid ar/runinx.pid;        
+    #进程文件
+    pid /var/run/nginx.pid;        
        
     #一个nginx进程打开的最多文件描述符数目，理论值应该是最多打开文件数（系统的值ulimit -n）与nginx进程数相除，但是nginx分配请求并不均匀，  
-    所以建议与ulimit -n的值保持一致。  
-      
+    所以建议与ulimit -n的值保持一致。
     worker_rlimit_nofile 65535;               
       
     #工作模式与连接数上限        
     events        
     {        
     #参考事件模型，use [ kqueue | rtsig | epoll | /dev/poll | select | poll ]; epoll模型是Linux 2.6以上版本内核中的高性能网络I/O模型，  
-    如果跑在FreeBSD上面，就用kqueue模型。  
-      
-    use epoll;        
+    如果跑在FreeBSD上面，就用kqueue模型。
+    use epoll;
+            
     #单个进程最大连接数（最大连接数=连接数*进程数）       
     worker_connections 65535;        
     }  
