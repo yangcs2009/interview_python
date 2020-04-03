@@ -74,10 +74,6 @@
             * [from module import symbol (包括from module import *, from module import symbol as xxx )](#from-module-import-symbol-包括from-module-import--from-module-import-symbol-as-xxx-)
         * [包package](#包package)
             * [总结](#总结)
-    * [37 wsgi](#37-wsgi)
-        * [什么是WSGI](#什么是wsgi)
-        * [几个关于WSGI相关的概念](#几个关于wsgi相关的概念)
-    * [Django、Tornado和Flask框架](#djangotornado和flask框架)
     * [正向代理和反向代理](#正向代理和反向代理)
         * [区别](#区别)
         * [正向代理的应用](#正向代理的应用)
@@ -1582,54 +1578,6 @@ from语句用于将模块中的具体定义加载到当前命名空间中。from
 * __init__.py也是个模块，那也可以在这个模块中导入其他模块，这样import package时，就能直接使用一些符号了。
 * __init__.py也是个模块，也可以定义__all__列表变量，控制from package import * 的作用。
 
-## 37 wsgi
-
-### 什么是WSGI
-![wsgi.jpeg](img/python/wsgi.jpeg)  
-Python WSGI 的出现，让开发者可以将 Web 框架与 Web 服务器的选择分隔开来，不再相互限制。现在，你可以真正地将不同的 Web 服务器与 Web 框架进行
-混合搭配，选择满足自己需求的组合。例如，可以使用 Gunicorn 或 Nginx/uWSGI 来运行 Django、Flask 或 web.py 应用。
-
-### 几个关于WSGI相关的概念  
-**WSGI**：全称是`Web Server Gateway Interface`，WSGI不是服务器，python模块，框架，API或者任何软件，只是一种<span style="color:red">规范</span>.，描述web server如何
-与web application通信的规范。server和application的规范在PEP 3333中有具体描述。要实现WSGI协议，必须同时实现web server和web application，
-当前运行在WSGI协议之上的web框架有`Torando,Flask,Django`
-
-**uwsgi**：与WSGI一样是一种通信协议，是uWSGI服务器的独占协议，用于定义传输信息的类型(type of information)，每一个uwsgi packet前4byte
-为传输信息类型的描述，与WSGI协议是两种东西，据说该协议是fcgi协议的10倍快。
-
-**uWSGI**：是一个web服务器，实现了WSGI协议、uwsgi协议、http协议等。
-
-![webserver.png](img/python/webserver.png)    
-WSGI协议主要包括server和application两部分：    
-**WSGI server**负责从客户端接收请求，将request转发给application，将application返回的response返回给客户端；   
-**WSGI application**接收由server转发的request，处理请求，并将处理结果返回给server。application中可以包括多个栈式的中间件(middlewares)，
-这些中间件需要同时实现server与application，因此可以在WSGI服务器与WSGI应用之间起调节作用：对服务器来说，中间件扮演应用程序，对应用程序来说，
-中间件扮演服务器。
-
-WSGI协议其实是定义了一种server与application解耦的规范，即可以有多个实现WSGI server的服务器，也可以有多个实现WSGI application的框架，
-那么就可以选择任意的server和application组合实现自己的web应用。例如uWSGI和Gunicorn都是实现了WSGI server协议的服务器，Django，Flask是
-实现了WSGI application协议的web框架，可以根据项目实际情况搭配使用。
-
-## Django、Tornado和Flask框架
-在Python的web开发框架中，目前使用量最高的有Django、Flask和Tornado， **Django大而全、Flask小而精、Tornado性能高**。
-
-Django是Python中最全能的web开发框架，走大而全的方向。它最出名的是其 **全自动化的管理后台**：只需要使用起ORM，做简单的对象定义，它就能自动生
-成数据库结构、以及全功能的管理后台。不过Django提供的方便，也意味着Django内置的ORM跟框架内的其他模块耦合程度高， **深度绑定了该框架**，应用程序必须
-使用Django内置的ORM，否则就不能享受到框架内提供的种种基于其ORM的优秀特性。
-
-Tornado全称Tornado Web Server，是一个用Python语言写成的Web服务器兼Web应用框架。Tornado走的是少而精的方向，注重的是 **性能优越**，它最出名的是
-**异步非阻塞的服务器方式**。(Tornado框架和服务器一起组成一个WSGI的全栈替代品。单独在WSGI容器中使用tornado web框架或者tornaod http服务器，
-有一定的局限性，为了最大化的利用tornado的性能，推荐同时使用tornaod的web框架和HTTP服务器。)
-
-Flask是一个使用 Python 编写的 **轻量级Web应用框架**，也被称为 “microframework”，语法简单，部署很方便，整个框架自带了路径映射、
-模板引擎（Jinja2）、简单的数据库访问等web框架组件，支持WSGI协议（采用 Werkzeug）。Flask使用 BSD 授权。 Flask使用简单的核心，用
-extension 增加其他功能，虽然没有默认使用的数据库、窗体验证工具，然而Flask保留了扩增的弹性，可以用Flask-extension加入ORM、窗体验证工具、
-文件上传、各种开放式身份验证技术这些功能。
-
-从性能上看Tornado 比Django、Flask等主流 Web 服务器框架相比有着明显的区别：它是非阻塞式服务器，速度相当快。然而 Tornado 相比 Django
-和Flask属于较为原始的框架，插件少，许多内容需要自己去处理。而Flask插件多，文档非常专业，有专门的公司团队维护，对于快速开发很有效率。
-由于WSGI协议的存在，可以结合 Tornado 的服务器异步特性、并发处理能力和Flask的文档和扩展能力为一体。虽然像Django，Flask框架都有自己实现的
-简单的WSGI服务器，但一般用于服务器调试，生产环境下建议用其他WSGI服务器，比如Nginx+uwsgi+Django方式。
 
 ## 正向代理和反向代理
 
@@ -1668,8 +1616,6 @@ extension 增加其他功能，虽然没有默认使用的数据库、窗体验�
 1. 保护内网安全 
 2. 负载均衡 
 3. 缓存，减少服务器的压力 
-
-
 
 ## urllib和urllib2的区别
 
