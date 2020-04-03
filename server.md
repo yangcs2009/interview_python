@@ -1,6 +1,17 @@
 
 <!-- vim-markdown-toc GFM -->
 
+* [wsgi](#wsgi)
+    * [什么是WSGI](#什么是wsgi)
+    * [几个关于WSGI相关的概念](#几个关于wsgi相关的概念)
+* [Gunicorn](#gunicorn)
+    * [特点](#特点)
+    * [架构](#架构)
+        * [服务模型(Server Model)](#服务模型server-model)
+        * [Master(管理者)](#master管理者)
+        * [worker](#worker)
+* [Django、Tornado和Flask框架](#djangotornado和flask框架)
+    * [Django](#django)
 * [负载均衡算法及主流算法](#负载均衡算法及主流算法)
     * [负载均衡](#负载均衡)
     * [负载均衡分类](#负载均衡分类)
@@ -41,6 +52,105 @@
     * [ZooKeeper 集群角色介绍](#zookeeper-集群角色介绍)
 
 <!-- vim-markdown-toc -->
+
+# wsgi
+
+## 什么是WSGI
+![wsgi.jpeg](img/python/wsgi.jpeg)  
+Python WSGI 的出现，让开发者可以将 Web 框架与 Web 服务器的选择分隔开来，不再相互限制。现在，你可以真正地将不同的 Web 服务器与 Web 框架进行
+混合搭配，选择满足自己需求的组合。例如，可以使用 Gunicorn 或 Nginx/uWSGI 来运行 Django、Flask 或 web.py 应用。
+
+## 几个关于WSGI相关的概念  
+**WSGI**：全称是`(Python) Web Server Gateway Interface`，WSGI不是服务器，python模块，框架，API或者任何软件，只是一种<span style="color:red">规范</span>，描述web server如何
+与web application通信的规范。server和application的规范在PEP 3333中有具体描述。要实现WSGI协议，必须同时实现web server和web application，
+当前运行在WSGI协议之上的web框架有`Torando,Flask,Django`
+
+**uwsgi**：与WSGI一样是一种通信协议，是uWSGI服务器的独占协议，用于定义传输信息的类型(type of information)，每一个uwsgi packet前4byte
+为传输信息类型的描述，与WSGI协议是两种东西，据说该协议是fcgi协议的10倍快。
+
+**uWSGI**：是一个web服务器，实现了WSGI协议、uwsgi协议、http协议等。
+
+![webserver.png](img/python/webserver.png)    
+WSGI协议主要包括server和application两部分：    
+**WSGI server**负责从客户端接收请求，将request转发给application，将application返回的response返回给客户端；   
+**WSGI application**接收由server转发的request，处理请求，并将处理结果返回给server。application中可以包括多个栈式的中间件(middlewares)，
+这些中间件需要同时实现server与application，因此可以在WSGI服务器与WSGI应用之间起调节作用：对服务器来说，中间件扮演应用程序，对应用程序来说，
+中间件扮演服务器。
+
+WSGI协议其实是定义了一种server与application解耦的规范，即可以有多个实现WSGI server的服务器，也可以有多个实现WSGI application的框架，
+那么就可以选择任意的server和application组合实现自己的web应用。例如uWSGI和Gunicorn都是实现了WSGI server协议的服务器，Django，Flask是
+实现了WSGI application协议的web框架，可以根据项目实际情况搭配使用。
+
+# Gunicorn
+
+[Gunicorn](https://github.com/benoitc/gunicorn) (Green Unicorn)是一款UNIX 下的 Python WSGI 的 HTTP 服务器。它是pre-work模式，从 Ruby 的独角兽（Unicorn）项目移植。
+该 Gunicorn 服务器与各种 Web 框架兼容，只需非常简单的执行，轻量级的资源消耗，以及相当迅速。
+
+## 特点
+
+* Gunicorn是基于prefork模式的Python wsgi应用服务器，支持 Unix like的系统
+* 采用epoll (Linux下) 非阻塞网络I/O 模型
+* 多种Worker类型可以选择 同步的，基于事件的（gevent tornado等），基于多线程的
+* 高性能，比之uwsgi不相上下
+* 配置使用非常简单
+* 支持 Python 2.x >= 2.6 or Python 3.x >= 3.2
+
+## 架构
+
+### 服务模型(Server Model)
+
+Gunicorn是基于 pre-fork 模型的。也就意味着有一个中心管理进程( master process )用来管理 worker 进程集合。Master从不知道任何关于客户端的信息。
+所有的请求和响应处理都是由 worker 进程来处理的。
+
+### Master(管理者)
+
+主程序是一个简单的循环,监听各种信号以及相应的响应进程。master管理着正在运行的worker集合,通过监听各种信号比如TTIN, TTOU, and CHLD. TTIN 
+and TTOU响应的增加和减少worker的数目。CHLD信号表明一个子进程已经结束了,在这种情况下master会自动的重启失败的worker。
+
+工作流程：
+
+* 读取配置项， 如worker数量，worker工作模式，监听的地址等；
+* 然后初始化信号处理函数，然后建立socket但不listen；
+* 接下来fork出所有的worker进程；
+* 最后进入循环：处理信号队列中的信号，杀掉并重启失去响应的子进程，如果没事儿干，就“sleep”一会儿。
+
+### worker
+woker有很多种，包括：ggevent、geventlet、gtornado等等。
+
+工作流程：
+
+* 读取配置，初始化信号处理函数，然后进入循环：处理监听端口上的请求（也就是会调用wsgi app的地方）
+* 向master报告自己还活着
+
+# Django、Tornado和Flask框架
+在Python的web开发框架中，目前使用量最高的有Django、Flask和Tornado， **Django大而全、Flask小而精、Tornado性能高**。
+
+## Django
+[Django架构流程分析](https://www.jianshu.com/p/17d8266bb265)
+
+![django_arch.png](img/server/django_arch.png)
+
+Django是Python中最全能的web开发框架，走大而全的方向。它最出名的是其 **全自动化的管理后台**：只需要使用起ORM，做简单的对象定义，它就能自动生
+成数据库结构、以及全功能的管理后台。不过Django提供的方便，也意味着Django内置的ORM跟框架内的其他模块耦合程度高， **深度绑定了该框架**，应用程序必须
+使用Django内置的ORM，否则就不能享受到框架内提供的种种基于其ORM的优秀特性。
+
+![django_arch.png](img/server/django_workflow.jpg)
+
+Tornado全称Tornado Web Server，是一个用Python语言写成的Web服务器兼Web应用框架。Tornado走的是少而精的方向，注重的是 **性能优越**，它最出名的是
+**异步非阻塞的服务器方式**。(Tornado框架和服务器一起组成一个WSGI的全栈替代品。单独在WSGI容器中使用tornado web框架或者tornaod http服务器，
+有一定的局限性，为了最大化的利用tornado的性能，推荐同时使用tornaod的web框架和HTTP服务器。)
+
+Flask是一个使用 Python 编写的 **轻量级Web应用框架**，也被称为 “microframework”，语法简单，部署很方便，整个框架自带了路径映射、
+模板引擎（Jinja2）、简单的数据库访问等web框架组件，支持WSGI协议（采用 Werkzeug）。Flask使用 BSD 授权。 Flask使用简单的核心，用
+extension 增加其他功能，虽然没有默认使用的数据库、窗体验证工具，然而Flask保留了扩增的弹性，可以用Flask-extension加入ORM、窗体验证工具、
+文件上传、各种开放式身份验证技术这些功能。
+
+从性能上看Tornado 比Django、Flask等主流 Web 服务器框架相比有着明显的区别：它是非阻塞式服务器，速度相当快。然而 Tornado 相比 Django
+和Flask属于较为原始的框架，插件少，许多内容需要自己去处理。而Flask插件多，文档非常专业，有专门的公司团队维护，对于快速开发很有效率。
+由于WSGI协议的存在，可以结合 Tornado 的服务器异步特性、并发处理能力和Flask的文档和扩展能力为一体。虽然像Django，Flask框架都有自己实现的
+简单的WSGI服务器，但一般用于服务器调试，生产环境下建议用其他WSGI服务器，比如Nginx+uwsgi+Django方式。
+
+
 # 负载均衡算法及主流算法
 
 [负载均衡算法及手段](https://segmentfault.com/a/1190000004492447#articleHeader12)  
