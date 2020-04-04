@@ -25,6 +25,7 @@
         * [poll](#poll)
         * [epoll](#epoll)
             * [一 epoll操作过程](#一-epoll操作过程)
+            * [redis epoll demo](#redis-epoll-demo)
             * [二 工作模式](#二-工作模式)
             * [三 代码演示](#三-代码演示)
             * [四 epoll总结](#四-epoll总结)
@@ -344,7 +345,58 @@ EPOLLONESHOT：只监听一次事件，当监听完这次事件之后，如果�
 3.int epoll_wait(int epfd, struct epoll_event * events, int maxevents, int timeout);  
 等待epfd上的io事件，最多返回maxevents个事件。
 参数events用来从内核得到事件的集合，maxevents告之内核这个events有多大，这个maxevents的值不能大于创建epoll_create()时的
-size，参数timeout是超时时间（毫秒，0会立即返回，-1将不确定，也有说法说是永久阻塞）。该函数返回需要处理的事件数目，如返回0表示已超时。
+size，参数timeout是超时时间（毫秒，0会立即返回，-1将不确定，也有说法说是永久阻塞）。该函数返回需要处理的事件数目， **返回0表示已超时**。
+
+#### redis epoll demo
+
+```
+execve("./redis-server-ap-4.0.6.5", ["./redis-server-ap-4.0.6.5"], [/* 26 vars */]) = 0
+epoll_create(1024)                      = 5
+socket(PF_INET6, SOCK_STREAM, IPPROTO_TCP) = 6
+setsockopt(6, SOL_IPV6, IPV6_V6ONLY, [1], 4) = 0
+setsockopt(6, SOL_SOCKET, SO_REUSEADDR, [1], 4) = 0
+bind(6, {sa_family=AF_INET6, sin6_port=htons(6379), inet_pton(AF_INET6, "::", &sin6_addr), sin6_flowinfo
+=0, sin6_scope_id=0}, 28) = 0
+listen(6, 511)                          = 0
+fcntl(6, F_GETFL)                       = 0x2 (flags O_RDWR)
+fcntl(6, F_SETFL, O_RDWR|O_NONBLOCK)    = 0
+socket(PF_INET, SOCK_STREAM, IPPROTO_TCP) = 7
+setsockopt(7, SOL_SOCKET, SO_REUSEADDR, [1], 4) = 0
+bind(7, {sa_family=AF_INET, sin_port=htons(6379), sin_addr=inet_addr("0.0.0.0")}, 16) = 0
+listen(7, 511)                          = 0
+fcntl(7, F_GETFL)                       = 0x2 (flags O_RDWR)
+fcntl(7, F_SETFL, O_RDWR|O_NONBLOCK)    = 0
+epoll_ctl(5, EPOLL_CTL_ADD, 6, {EPOLLIN, {u32=6, u64=6}}) = 0
+epoll_ctl(5, EPOLL_CTL_ADD, 7, {EPOLLIN, {u32=7, u64=7}}) = 0
+epoll_ctl(5, EPOLL_CTL_ADD, 3, {EPOLLIN, {u32=3, u64=3}}) = 0
+
+epoll_wait(5, {}, 10128, 0)             = 0
+open("/proc/3131257/stat", O_RDONLY)    = 12
+read(12, "3131257 (redis-server-ap) R 3131"..., 4096) = 340
+close(12)                               = 0
+wait4(-1, 0x7ffdcfb60c10, WNOHANG, NULL) = 0
+read(3, 0x7ffdcfb60c0f, 1)              = -1 EAGAIN (Resource temporarily unavailable)
+epoll_wait(5, 7feb13adb740, 10128, 100) = -1 EINTR (Interrupted system call)
+--- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=3131264, si_uid=1000, si_status=0, si_utime=0, si_stime=0} ---
+read(3, 0x7ffdcfb60c0f, 1)              = -1 EAGAIN (Resource temporarily unavailable)
+epoll_wait(5, {}, 10128, 9)             = 0
+open("/proc/3131257/stat", O_RDONLY)    = 12
+read(12, "3131257 (redis-server-ap) R 3131"..., 4096) = 340
+close(12)                               = 0
+wait4(-1, [{WIFEXITED(s) && WEXITSTATUS(s) == 0}], WNOHANG, NULL) = 3131264
+stat("/etc/localtime", {st_mode=S_IFREG|0644, st_size=388, ...}) = 0
+write(1, "3131257:M 04 Apr 16:44:13.371 * "..., 74) = 74
+read(10, "\0\0\0\0\0\0\0\0\0\220\2\0\0\0\0\0xV4\22z\332}\301", 24) = 24
+close(10)                               = 0
+close(11)                               = 0
+read(3, 0x7ffdcfb60c0f, 1)              = -1 EAGAIN (Resource temporarily unavailable)
+epoll_wait(5, {}, 10128, 100)           = 0
+
+epoll_wait(5, {{EPOLLIN, {u32=10, u64=10}}}, 10128, 100) = 1
+read(10, "info\n", 16384)               = 5
+
+```
+
 
 #### 二 工作模式
 epoll对文件描述符的操作有两种模式：LT（level trigger）和ET（edge trigger）。LT模式是默认模式，LT模式与ET模式的区别如下：  
