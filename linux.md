@@ -240,6 +240,9 @@ block进程。但是，当kernel中数据准备好的时候，recvfrom会将数�
 就绪后自己负责进行读写，也就是说这个读写过程是阻塞的，而异步I/O则无需自己负责进行读写，异步I/O的实现会负责把数据从内核拷贝到用户空间。
 
 ### select
+
+![select_flow1.png](img/linux/select_flow1.png)
+
 `int select (int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);`  
 
 select 函数监视的文件描述符分3类，分别是writefds、readfds、和exceptfds。调用后select函数会阻塞，直到有描述符就绪
@@ -304,6 +307,8 @@ poll技术与select 技术本质上是没有区别的，只是文件句柄的存
 
 epoll是在2.6内核中提出的，是之前的select和poll的增强版本。相对于select和poll来说，epoll更加灵活，`没有描述符限制`。epoll
 使用一个文件描述符管理多个描述符，将用户关系的文件描述符的事件存放到内核的一个事件表中，这样在用户空间和内核空间的copy只需一次。
+
+![epoll_flow.png](img/linux/epoll_flow.png)
 
 #### 一 epoll操作过程
 epoll操作过程需要三个接口，分别如下：
