@@ -753,6 +753,8 @@ In general, you shouldn't need to override `__new__` unless you're subclassing a
 
 ps: `__metaclass__`是创建类时起作用.所以我们可以分别使用`__metaclass__`,`__new__`和`__init__`来分别在类创建,实例创建和实例初始化的时候做一些小手脚.
 
+主要区别在于： **__new__是用来创造一个类的实例的，而__init__是用来初始化一个实例的**。
+
 ## 16 单例模式
 
 [Python 中的单例模式](http://funhacks.net/2017/01/17/singleton/)   
