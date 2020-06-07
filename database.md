@@ -548,6 +548,9 @@ chunk供下次有适合大小item时使用，当我们用完这所有的5242个c
 [Redis数据结构](https://zhuanlan.zhihu.com/p/68607184)
 
 ### Redis编码模式
+
+![redis_encoding.jpeg](img/database/redis_encoding.jpeg)
+
 ![Redis数据模型图](img/database/encoding.png)  
 
 * 字符串可以被编码为embstr(小于39字节。在3.0版本之前是以39字节为分界。在3.2版本之后，则变成了44字节为分界。）、raw（一般字符串）或int
