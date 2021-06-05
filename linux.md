@@ -270,13 +270,15 @@ block进程。但是，当kernel中数据准备好的时候，recvfrom会将数�
 
 ![select_flow1.png](img/linux/select_flow1.png)
 
-`int select (int n, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);`  
+`int select (int maxfdp1, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);`  
 
 select 函数监视的文件描述符分3类，分别是writefds、readfds、和exceptfds。调用后select函数会阻塞，直到有描述符就绪
 （有数据可读、可写、或者有except），或者超时（timeout指定等待时间，如果立即返回设为null即可），函数返回。当select函数返回后，
 可以通过遍历fdset，来找到就绪的描述符。
 
 ![select_flow.png](img/linux/select_flow.png)
+
+![select_demo.png](img/linux/select_demo.png)
 
 #### Select实现过程
 
