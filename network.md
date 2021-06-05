@@ -446,10 +446,10 @@ listen函数将socket变为被动类型的，等待客户的连接请求。
 
 ![socket_queue.png](img/network/socket_queue.png)
 
+![socket_connect.png](img/network/socket_connect.png)
+
 connect函数的第一个参数即为客户端的socket描述字，第二参数为服务器的socket地址，第三个参数为socket地址的长度。客户端通过调用connect函数来建立
 与TCP服务器的连接。
-
-![socket_connect.png](img/network/socket_connect.png)
 
 ## accept()
 TCP服务器端依次调用socket()、bind()、listen()之后，就会监听指定的socket地址了。TCP客户端依次调用socket()、connect()之后向TCP服务器
@@ -473,7 +473,7 @@ socket描述字。一个服务器通常通常仅仅只创建一个监听socket�
 启动另外的进程以取代当前运行的进程**。Linux的进程控制和传统的Unix进程控制基本一致，只在一些细节的地方有些区别，例如在Linux系统中调用vfork和fork完全相同，
 而在有些版本的Unix系统中，vfork调用有不同的功能。由于这些差别几乎不影响我们大多数的编程，在这里我们不予考虑。
 
-### fork（）
+### fork()
 
 ```
 #include <unistd.h>
@@ -485,8 +485,8 @@ fork在英文中是"分叉"的意思。为什么取这个名字呢？因为一�
 下面就看看如何具体使用fork，这段程序演示了使用fork的基本框架：
 
 ```
- 1void main()
- 2{
+ 1 void main()
+ 2 {
  3    int i;
  4    if ( fork() == 0 ) 
  5    {
@@ -500,7 +500,7 @@ fork在英文中是"分叉"的意思。为什么取这个名字呢？因为一�
 13       for ( i = 1; i <1000; i ++ ) 
 14       printf("This is process process\n");
 15    }
-16}
+16 }
 ```
 
 程序运行后，你就能看到屏幕上交替出现子进程与父进程各打印出的一千条信息了。如果程序还在运行中，你用ps命令就能看到系统中有两个它在运行了。
@@ -521,13 +521,13 @@ fork在英文中是"分叉"的意思。为什么取这个名字呢？因为一�
 下面演示一个足以"搞死"Linux的小程序，其源代码非常简单：
 
 ```
-1void main()
-2{
+1 void main()
+2 {
 3   for( ; ; )
 4   {
 5     fork();
 6   }
-7}
+7 }
 ```
 
 这个程序什么也不做，就是死循环地fork，其结果是程序不断产生进程，而这些进程又不断产生新的进程，很快，系统的进程就满了，系统就被这么多不断产生的
